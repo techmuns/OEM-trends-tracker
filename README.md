@@ -85,13 +85,21 @@ The repo lives at `techmuns/oem-trends-tracker`. Ensure `main` is pushed.
 ### 2. Connect Cloudflare Pages
 1. Cloudflare Dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
 2. Select this GitHub repository and the **`main`** branch (production branch).
-3. Set the **build configuration** (these match [`wrangler.toml`](wrangler.toml)):
+3. Set the **build configuration** in the dashboard (there is intentionally **no
+   `wrangler.toml`** — a Pages `wrangler.toml` with an output dir but no build command makes
+   Cloudflare skip the build and fail with *"output directory dist not found"*). Set:
    - **Framework preset:** `None`
-   - **Build command:** `bash scripts/build-site.sh` (builds the React app in `ui/` and
-     serves the committed view-model at `/data/2w.json`; pnpm is auto-detected)
+   - **Build command:** `bash scripts/build-site.sh` — builds the React app in `ui/` and
+     serves the committed view-model at `/data/2w.json`. **This must be set**, or Cloudflare
+     skips the build and there is no `dist/` (it is generated, not committed).
    - **Build output directory:** `dist`
    - **Root directory:** `/`
+   - Node version is pinned by [`.node-version`](.node-version) (22); pnpm is auto-detected.
 4. Save and deploy. Every push to `main` now auto-deploys.
+
+> If a build already failed: open the project → **Settings → Builds & deployments → Build
+> configuration → Edit**, set the Build command and Output directory above, then **Retry
+> deployment**.
 
 ### 3. Environment variables / secrets
 - **Phase 0:** none required. The build is static.

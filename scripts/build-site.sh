@@ -19,10 +19,11 @@ fi
 mkdir -p ui/public/data
 cp "$VIEW" ui/public/data/2w.json
 
-# 2. Build the React UI.
+# 2. Build the React UI. Prefer the committed lockfile; fall back if the deploy image's
+#    pnpm can't consume it (version drift) so the deploy never hard-fails on the lockfile.
 cd ui
 if [ -z "${SKIP_UI_INSTALL:-}" ]; then
-  pnpm install --frozen-lockfile
+  pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
 fi
 pnpm build   # -> ui/dist (includes /data/2w.json from public/)
 cd ..
