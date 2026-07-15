@@ -5,8 +5,7 @@ import type { CategoryInfo, Flow, Period, PeriodType, Point, Powertrain, ViewMod
 import { buildTable, getSeries, priorKey, type TableRow } from "./lib/view";
 import { fmtPct, fmtPp, fmtShare, fmtUnits, fmtUnitsCompact, monthYear, shortName } from "./lib/format";
 import { ComparisonTable, type DisplayMode } from "./components/ComparisonTable";
-import { TrendChart } from "./components/TrendChart";
-import { ShareTrendChart, type TrendLine, type TrendPoint } from "./components/ShareTrendChart";
+import { ShareTrendChart, type TrendLine, type TrendPoint, type ValueKind } from "./components/ShareTrendChart";
 import {
   Delta,
   deltaDir,
@@ -242,9 +241,29 @@ function Dashboard({
             setOem={setOem}
           />
         )}
-        {tab === "ev" && <EvTab view={view} pt={pt} period={period} setPeriod={setPeriodKey} />}
+        {tab === "ev" && (
+          <EvTab
+            view={view}
+            pt={pt}
+            period={period}
+            setPeriod={setPeriodKey}
+            oem={oem}
+            setOem={setOem}
+            mode={mode}
+            setMode={setMode}
+          />
+        )}
         {tab === "prod" && (
-          <ProdTab view={view} pt={pt} period={period} setPeriod={setPeriodKey} oem={oem} setOem={setOem} />
+          <ProdTab
+            view={view}
+            pt={pt}
+            period={period}
+            setPeriod={setPeriodKey}
+            oem={oem}
+            setOem={setOem}
+            mode={mode}
+            setMode={setMode}
+          />
         )}
 
         <Provenance view={view} />
@@ -397,32 +416,108 @@ function yoyNode(p?: Point) {
   return <Delta text={`${fmtPct(p.yoy)} YoY`} dir={deltaDir(p.yoy)} />;
 }
 
-// Build enriched share-trend lines: for each OEM, share plus pp-change vs previous period
-// and vs the same period last year, over the visible window. `baseNames` fixes rank colours;
-// extra names (e.g. a table-row hover outside the top 3) render as an added focusable line.
+// Build enriched trend lines for a (flow, powertrain) series set. Each point carries the
+// plotted metric (share or absolute volume) plus absolute volume, share, YoY and pp-changes,
+// so the tooltip is identical on every page. `baseNames` fixes rank colours; extra names
+// (e.g. a hovered row outside the top N) render as an added focusable line.
 function buildTrendLines(
   view: ViewModel,
   names: string[],
   baseNames: string[],
+  flow: Flow,
+  powertrain: Powertrain,
   pt: PeriodType,
   winAxis: Period[],
   fullAxis: Period[],
+  valueKind: ValueKind,
 ): TrendLine[] {
   return names.map((name) => {
     const rank = baseNames.indexOf(name);
     const color = rank >= 0 ? RANK_COLORS[rank] ?? "var(--chart-3)" : "var(--chart-3)";
-    const s = getSeries(view, name, "domestic", "all", pt);
+    const s = getSeries(view, name, flow, powertrain, pt);
     const points: TrendPoint[] = winAxis.map((p) => {
       const fi = fullAxis.findIndex((a) => a.key === p.key);
       const cur = s?.points[p.key];
       const prev = fi > 0 ? s?.points[fullAxis[fi - 1].key] : undefined;
-      const value = cur?.share ?? null;
-      const prevChg = value != null && prev?.share != null ? value - prev.share : null;
-      const yoyChg = cur?.chg ?? null; // precomputed YoY share change (pp) from the view-model
-      return { label: p.label, value, prevChg, yoyChg };
+      const abs = cur?.v ?? null;
+      const share = cur?.share ?? null;
+      const prevChg = share != null && prev?.share != null ? share - prev.share : null;
+      return {
+        label: p.label,
+        value: valueKind === "share" ? share : abs,
+        abs,
+        share,
+        yoy: cur?.yoy ?? null,
+        prevChg,
+        yoyChg: cur?.chg ?? null, // precomputed YoY share change (pp)
+      };
     });
     return { name, display: shortName(name), color, points };
   });
+}
+
+// EV vs ICE penetration lines (EV page default): EV/ICE share of the total reported universe.
+function evIceLines(view: ViewModel, totalLabel: string, pt: PeriodType, winAxis: Period[], fullAxis: Period[]): TrendLine[] {
+  const pen = (k: string) => view.ev_penetration["domestic"]?.[pt]?.[k] ?? null;
+  const evTot = getSeries(view, totalLabel, "domestic", "ev", pt);
+  const allTot = getSeries(view, totalLabel, "domestic", "all", pt);
+  const build = (isEv: boolean): TrendPoint[] =>
+    winAxis.map((p) => {
+      const fi = fullAxis.findIndex((a) => a.key === p.key);
+      const cp = pen(p.key);
+      const pp = fi > 0 ? pen(fullAxis[fi - 1].key) : null;
+      const yp = pen(priorKey(pt, p.key));
+      const share = cp == null ? null : isEv ? cp : 1 - cp;
+      const evv = evTot?.points[p.key]?.v ?? null;
+      const allv = allTot?.points[p.key]?.v ?? null;
+      const abs = isEv ? evv : allv != null && evv != null ? allv - evv : null;
+      const prevShare = pp == null ? null : isEv ? pp : 1 - pp;
+      const yShare = yp == null ? null : isEv ? yp : 1 - yp;
+      return {
+        label: p.label,
+        value: share,
+        abs,
+        share,
+        yoy: isEv ? evTot?.points[p.key]?.yoy ?? null : null,
+        prevChg: share != null && prevShare != null ? share - prevShare : null,
+        yoyChg: share != null && yShare != null ? share - yShare : null,
+      };
+    });
+  return [
+    { name: "EV", display: "EV", color: EV_LINE, points: build(true) },
+    { name: "ICE", display: "ICE", color: ICE_LINE, points: build(false) },
+  ];
+}
+
+// Start / latest / total-change summary for a locked series (shown below the chart).
+function dirCls(v: number): string {
+  return v > 0.0005 ? "pos" : v < -0.0005 ? "neg" : "flat";
+}
+function focusSummary(line: TrendLine | undefined, valueKind: ValueKind): { label: string; value: string; cls?: string }[] | null {
+  if (!line) return null;
+  const first = line.points.find((p) => p.value != null)?.value ?? null;
+  let last: number | null = null;
+  for (let i = line.points.length - 1; i >= 0; i--) {
+    if (line.points[i].value != null) {
+      last = line.points[i].value!;
+      break;
+    }
+  }
+  if (first == null || last == null) return null;
+  if (valueKind === "share") {
+    const total = last - first;
+    return [
+      { label: "Start", value: fmtShare(first) },
+      { label: "Latest", value: fmtShare(last) },
+      { label: "Total change", value: fmtPp(total), cls: dirCls(total) },
+    ];
+  }
+  const growth = first ? last / first - 1 : null;
+  return [
+    { label: "Start", value: fmtUnitsCompact(first) },
+    { label: "Latest", value: fmtUnitsCompact(last) },
+    { label: "Total change", value: growth == null ? "—" : fmtPct(growth), cls: growth == null ? undefined : dirCls(growth) },
+  ];
 }
 
 function trendWindow(pt: PeriodType, idx: number): number {
@@ -431,6 +526,177 @@ function trendWindow(pt: PeriodType, idx: number): number {
 }
 function rangeLabels(pt: PeriodType): string[] {
   return pt === "month" ? ["6M", "12M", "24M"] : pt === "quarter" ? ["8Q", "12Q", "16Q"] : ["5Y", "8Y", "10Y"];
+}
+
+// ---- shared analytical template: [period rail | dominant table | supporting chart] ----
+// Every page (Sales, EV, Production/Exports) renders through this so the three behave like
+// different datasets inside one template: identical proportions, row hover→focus, click→lock,
+// Reset, tooltip, table view-toggle, range control, source footer and details expansion.
+interface TableConfig {
+  title: string;
+  subtitle?: string;
+  rows: TableRow[];
+  total: TableRow | null;
+  curLabel: string;
+  priorLabel: string;
+  partial?: { present: number; expected: number };
+  unavailable?: React.ReactNode; // render instead of the table (honest coverage message)
+}
+interface ChartConfig {
+  title: string;
+  info?: string;
+  subtitle?: string;
+  footer?: string;
+  lines: TrendLine[];
+  valueKind: ValueKind;
+  yLabel: string;
+  showYoY: boolean;
+  focusName: string | null;
+  lockedName: string | null;
+  domain?: [number, number];
+  summary?: { label: string; value: string; cls?: string }[] | null;
+  hint?: string;
+  emptyNote?: React.ReactNode; // render instead of the chart (coverage explanation)
+  onLock: (name: string) => void;
+}
+function AnalyticalTab({
+  axis,
+  pt,
+  period,
+  setPeriod,
+  oem,
+  setOem,
+  mode,
+  setMode,
+  table,
+  chart,
+  setHoverOem,
+  rangeIdx,
+  setRangeIdx,
+}: {
+  axis: Period[];
+  pt: PeriodType;
+  period: Period;
+  setPeriod: (v: string) => void;
+  oem: string;
+  setOem: (v: string) => void;
+  mode: DisplayMode;
+  setMode: (v: DisplayMode) => void;
+  table: TableConfig;
+  chart: ChartConfig;
+  setHoverOem: (v: string | null) => void;
+  rangeIdx: number;
+  setRangeIdx: (v: number) => void;
+}) {
+  const [details, setDetails] = useState(false);
+  const norail = pt === "year";
+
+  const tableCard = (
+    <WidgetCard
+      title={table.title}
+      subtitle={table.subtitle}
+      right={
+        table.unavailable ? undefined : (
+          <div className="card-h-actions">
+            {table.partial && <PartialBadge present={table.partial.present} expected={table.partial.expected} />}
+            <div className="seg mini" role="group" aria-label="Display mode">
+              {(["both", "absolute", "yoy"] as DisplayMode[]).map((m) => (
+                <button key={m} className={mode === m ? "active" : ""} onClick={() => setMode(m)}>
+                  {m === "both" ? "Both" : m === "absolute" ? "Absolute" : "YoY"}
+                </button>
+              ))}
+            </div>
+            <button className="btn" onClick={() => setDetails((d) => !d)} title="Expand the full table">
+              {details ? "Collapse" : "View details"} <IconExternal />
+            </button>
+          </div>
+        )
+      }
+    >
+      {table.unavailable ? (
+        table.unavailable
+      ) : table.rows.length ? (
+        <ComparisonTable
+          rows={table.rows}
+          total={table.total}
+          curLabel={table.curLabel}
+          priorLabel={table.priorLabel}
+          mode={mode}
+          selected={oem}
+          expanded={details}
+          onSelect={(c) => setOem(c)}
+          onHover={setHoverOem}
+        />
+      ) : (
+        <Empty onReset={() => setOem("")} />
+      )}
+    </WidgetCard>
+  );
+
+  const chartCard = (
+    <WidgetCard
+      title={chart.title}
+      info={chart.info}
+      subtitle={chart.subtitle}
+      right={
+        <div className="card-h-actions">
+          {oem && (
+            <button className="btn" onClick={() => setOem("")} title="Clear the selection">
+              Reset
+            </button>
+          )}
+          <div className="seg mini" role="group" aria-label="Trend range">
+            {rangeLabels(pt).map((lbl, i) => (
+              <button key={lbl} className={rangeIdx === i ? "active" : ""} onClick={() => setRangeIdx(i)}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+        </div>
+      }
+      footer={chart.footer}
+    >
+      {chart.emptyNote ? (
+        chart.emptyNote
+      ) : chart.lines.some((l) => l.points.some((p) => p.value !== null)) ? (
+        <>
+          <ShareTrendChart
+            lines={chart.lines}
+            focusName={chart.focusName}
+            lockedName={chart.lockedName}
+            valueKind={chart.valueKind}
+            yLabel={chart.yLabel}
+            domain={chart.domain}
+            showYoY={chart.showYoY}
+            onLock={chart.onLock}
+          />
+          {chart.summary && (
+            <div className="trend-summary">
+              {chart.summary.map((s) => (
+                <span key={s.label}>
+                  <em>{s.label}</em> <span className={s.cls}>{s.value}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="trend-hint">{chart.hint ?? "Hover to inspect a period · Click an OEM to lock focus."}</div>
+        </>
+      ) : (
+        <div className="chart-hint">No trend data is available for the current selection.</div>
+      )}
+    </WidgetCard>
+  );
+
+  return (
+    <>
+      <div className={`mainrow ${details ? "details" : ""} ${norail ? "norail" : ""}`}>
+        {!norail && <PeriodRail axis={axis} pt={pt} periodKey={period.key} onChange={setPeriod} />}
+        {tableCard}
+        {!details && chartCard}
+      </div>
+      {details && <div className="row">{chartCard}</div>}
+    </>
+  );
 }
 
 // --- Sales & Market Share ---
@@ -453,7 +719,6 @@ function SalesTab({
   oem: string;
   setOem: (v: string) => void;
 }) {
-  const [details, setDetails] = useState(false);
   const [rangeIdx, setRangeIdx] = useState(1);
   const [hoverOem, setHoverOem] = useState<string | null>(null);
   const axis = view.periods[pt];
@@ -475,24 +740,7 @@ function SalesTab({
   const top3 = rows.slice(0, 3).map((r) => r.company);
   const baseNames = oem ? [oem] : top3;
   const extra = hoverOem && !baseNames.includes(hoverOem) ? [hoverOem] : [];
-  const trendLines = buildTrendLines(view, [...baseNames, ...extra], baseNames, pt, winAxis, axis);
-  const hasTrend = trendLines.some((l) => l.points.some((p) => p.value !== null));
-
-  // summary for the single locked OEM: starting share, latest share, total change (pp)
-  let summary: { start: number; latest: number; total: number } | null = null;
-  if (oem) {
-    const l = trendLines.find((x) => x.name === oem);
-    const first = l?.points.find((p) => p.value != null)?.value ?? null;
-    let last: number | null = null;
-    for (let i = (l?.points.length ?? 0) - 1; i >= 0; i--) {
-      const v = l!.points[i].value;
-      if (v != null) {
-        last = v;
-        break;
-      }
-    }
-    if (first != null && last != null) summary = { start: first, latest: last, total: last - first };
-  }
+  const trendLines = buildTrendLines(view, [...baseNames, ...extra], baseNames, "domestic", "all", pt, winAxis, axis, "share");
 
   // insights from precomputed rows
   const eligible = rows.filter((r) => r.chg !== null || r.yoy !== null);
@@ -506,63 +754,30 @@ function SalesTab({
   const evAxis = axis.filter((p) => !evLatest || p.date <= evLatest);
   const evP = evAxis[evAxis.length - 1];
   const evPen = evP ? view.ev_penetration["domestic"]?.[pt]?.[evP.key] ?? null : null;
-  const norail = pt === "year";
 
-  const trendCard = (
-    <WidgetCard
-      title={`Market Share Trend — ${oem ? shortName(oem) : "Top OEMs"}`}
-      info="Market share is calculated within the reported SIAM wholesale-dispatch universe. It may not represent the complete retail market."
-      subtitle="How each OEM's share within the reported SIAM universe has changed over time."
-      right={
-        <div className="card-h-actions">
-          {oem && (
-            <button className="btn" onClick={() => setOem("")} title="Return to the Top OEMs view">
-              Reset
-            </button>
-          )}
-          <div className="seg mini" role="group" aria-label="Trend range">
-            {rangeLabels(pt).map((lbl, i) => (
-              <button key={lbl} className={rangeIdx === i ? "active" : ""} onClick={() => setRangeIdx(i)}>
-                {lbl}
-              </button>
-            ))}
-          </div>
-        </div>
-      }
-      footer="Source: SIAM wholesale dispatches"
-    >
-      {hasTrend ? (
-        <>
-          <ShareTrendChart
-            lines={trendLines}
-            focusName={hoverOem}
-            lockedName={oem || null}
-            showYoY={pt !== "year"}
-            onLock={(name) => setOem(name)}
-          />
-          {oem && summary && (
-            <div className="trend-summary">
-              <span>
-                <em>Start</em> {fmtShare(summary.start)}
-              </span>
-              <span>
-                <em>Latest</em> {fmtShare(summary.latest)}
-              </span>
-              <span>
-                <em>Total change</em>{" "}
-                <span className={summary.total > 0.0005 ? "pos" : summary.total < -0.0005 ? "neg" : "flat"}>
-                  {fmtPp(summary.total)}
-                </span>
-              </span>
-            </div>
-          )}
-          <div className="trend-hint">Hover to inspect a period · Click an OEM to lock focus.</div>
-        </>
-      ) : (
-        <div className="chart-hint">No share history is available for the current selection.</div>
-      )}
-    </WidgetCard>
-  );
+  const table: TableConfig = {
+    title: `OEM Sales & Share Snapshot — ${period.label} vs ${priorL}`,
+    subtitle: "Wholesale dispatches · SIAM reported universe",
+    rows,
+    total,
+    curLabel: period.label,
+    priorLabel: priorL,
+    partial: partial ? { present: industry!.present, expected: industry!.expected } : undefined,
+  };
+  const chart: ChartConfig = {
+    title: `Market Share Trend — ${oem ? shortName(oem) : "Top OEMs"}`,
+    info: "Market share is calculated within the reported SIAM wholesale-dispatch universe. It may not represent the complete retail market.",
+    subtitle: "How each OEM's share within the reported SIAM universe has changed over time.",
+    footer: "Source: SIAM wholesale dispatches · share within reported SIAM universe",
+    lines: trendLines,
+    valueKind: "share",
+    yLabel: "Market share (%)",
+    showYoY: pt !== "year",
+    focusName: hoverOem,
+    lockedName: oem || null,
+    summary: oem ? focusSummary(trendLines.find((l) => l.name === oem), "share") : null,
+    onLock: (name) => setOem(name),
+  };
 
   return (
     <>
@@ -635,47 +850,21 @@ function SalesTab({
         )}
       </div>
 
-      <div className={`mainrow ${details ? "details" : ""} ${norail ? "norail" : ""}`}>
-        {!norail && <PeriodRail axis={axis} pt={pt} periodKey={period.key} onChange={setPeriod} />}
-        <WidgetCard
-          title={`OEM Sales & Share Snapshot — ${period.label} vs ${priorL}`}
-          subtitle="Wholesale dispatches · SIAM reported universe"
-          right={
-            <div className="card-h-actions">
-              {partial && <PartialBadge present={industry!.present} expected={industry!.expected} />}
-              <div className="seg mini" role="group" aria-label="Display mode">
-                {(["both", "absolute", "yoy"] as DisplayMode[]).map((m) => (
-                  <button key={m} className={mode === m ? "active" : ""} onClick={() => setMode(m)}>
-                    {m === "both" ? "Both" : m === "absolute" ? "Absolute" : "YoY"}
-                  </button>
-                ))}
-              </div>
-              <button className="btn" onClick={() => setDetails((d) => !d)} title="Expand the full table">
-                {details ? "Collapse" : "View details"} <IconExternal />
-              </button>
-            </div>
-          }
-        >
-          {rows.length ? (
-            <ComparisonTable
-              rows={rows}
-              total={total}
-              curLabel={period.label}
-              priorLabel={priorL}
-              mode={mode}
-              selected={oem}
-              expanded={details}
-              onSelect={(c) => setOem(c)}
-              onHover={setHoverOem}
-            />
-          ) : (
-            <Empty onReset={() => setOem("")} />
-          )}
-        </WidgetCard>
-        {!details && trendCard}
-      </div>
-
-      {details && <div className="row">{trendCard}</div>}
+      <AnalyticalTab
+        axis={axis}
+        pt={pt}
+        period={period}
+        setPeriod={setPeriod}
+        oem={oem}
+        setOem={setOem}
+        mode={mode}
+        setMode={setMode}
+        table={table}
+        chart={chart}
+        setHoverOem={setHoverOem}
+        rangeIdx={rangeIdx}
+        setRangeIdx={setRangeIdx}
+      />
 
       <div className="insights">
         <Insight title="Top share gainer" row={gainer} kind="chg" icon={<IconTrendUp />} onSelect={setOem} />
@@ -731,7 +920,28 @@ function Insight({
 }
 
 // --- EV vs ICE ---
-function EvTab({ view, pt, period, setPeriod }: { view: ViewModel; pt: PeriodType; period: Period; setPeriod: (v: string) => void }) {
+function EvTab({
+  view,
+  pt,
+  period,
+  setPeriod,
+  oem,
+  setOem,
+  mode,
+  setMode,
+}: {
+  view: ViewModel;
+  pt: PeriodType;
+  period: Period;
+  setPeriod: (v: string) => void;
+  oem: string;
+  setOem: (v: string) => void;
+  mode: DisplayMode;
+  setMode: (v: DisplayMode) => void;
+}) {
+  const [rangeIdx, setRangeIdx] = useState(1);
+  const [hoverOem, setHoverOem] = useState<string | null>(null);
+
   // For PV/3W/CV the source has no EV block — EV-only makers sit inline among ICE makers,
   // so EV volume is NOT derivable. Render it unavailable rather than a wrong number.
   if (!view.meta.has_ev) {
@@ -756,31 +966,69 @@ function EvTab({ view, pt, period, setPeriod }: { view: ViewModel; pt: PeriodTyp
   const evAxis = axis.filter((p) => !evLatest || p.date <= evLatest);
   const evPeriod = evAxis.find((p) => p.key === period.key) ?? evAxis[evAxis.length - 1];
   const frozen = evLatest && period.date > evLatest;
-  const norail = pt === "year";
 
   if (!evPeriod) return <Unavailable title="EV data unavailable">No EV breakdown in this source.</Unavailable>;
 
   const key = evPeriod.key;
+  const priorEvL = labelFor(axis, priorKey(pt, key));
   const evInd = pick(view, TOTAL, "domestic", "ev", pt, key);
   const allInd = pick(view, TOTAL, "domestic", "all", pt, key);
   const pen = view.ev_penetration["domestic"]?.[pt]?.[key] ?? null;
   const penPrior = view.ev_penetration["domestic"]?.[pt]?.[priorKey(pt, key)] ?? null;
   const ice = allInd && evInd ? { v: (allInd.v ?? 0) - (evInd.v ?? 0) } : { v: null };
 
-  const { rows, total } = buildTable(view, {
-    flow: "domestic",
-    powertrain: "ev",
-    periodType: pt,
-    periodKey: key,
-    totalLabel: TOTAL,
-  });
+  const { rows, total } = buildTable(view, { flow: "domestic", powertrain: "ev", periodType: pt, periodKey: key, totalLabel: TOTAL });
 
-  const penAxis = evAxis.slice(-Math.min(evAxis.length, 24));
-  const evPoints = penAxis.map((p) => ({ label: p.label, value: view.ev_penetration["domestic"]?.[pt]?.[p.key] ?? null }));
-  const icePoints = penAxis.map((p) => {
-    const v = view.ev_penetration["domestic"]?.[pt]?.[p.key];
-    return { label: p.label, value: v == null ? null : 1 - v };
-  });
+  // Chart: default = EV vs ICE penetration; focus (row hover or lock) = that OEM's EV-universe share.
+  const focus = hoverOem ?? (oem || null);
+  const win = trendWindow(pt, rangeIdx);
+  const winAxis = evAxis.slice(-Math.min(evAxis.length, win));
+  let chart: ChartConfig;
+  if (focus) {
+    const lines = buildTrendLines(view, [focus], [focus], "domestic", "ev", pt, winAxis, evAxis, "share");
+    chart = {
+      title: `EV Share Trend — ${shortName(focus)}`,
+      info: "EV share is calculated within the reported EV universe (SIAM EV makers). Pure-EV makers outside SIAM are excluded, so this understates EV.",
+      subtitle: "OEM share within the reported EV universe over time.",
+      footer: "Source: SIAM wholesale dispatches · EV share within reported EV universe",
+      lines,
+      valueKind: "share",
+      yLabel: "EV-universe share (%)",
+      showYoY: pt !== "year",
+      focusName: focus,
+      lockedName: oem || null,
+      summary: oem ? focusSummary(lines.find((l) => l.name === oem), "share") : null,
+      onLock: (name) => setOem(name),
+    };
+  } else {
+    chart = {
+      title: "EV Penetration Trend — EV vs ICE",
+      info: "EV penetration is EV volume as a share of the total reported 2W universe (SIAM). It may understate EV because some pure-EV makers are outside SIAM.",
+      subtitle: `Share of reported ${view.meta.category} universe · to ${evPeriod.label}`,
+      footer: "EV = blue accent · ICE = muted blue-grey · EV penetration within reported SIAM universe",
+      lines: evIceLines(view, TOTAL, pt, winAxis, evAxis),
+      valueKind: "share",
+      yLabel: "Penetration (%)",
+      domain: [0, 1],
+      showYoY: pt !== "year",
+      focusName: null,
+      lockedName: null,
+      summary: null,
+      hint: "Hover to inspect a period · Click an EV OEM row to lock its EV-share trend.",
+      onLock: (name) => {
+        if (name !== "EV" && name !== "ICE") setOem(name);
+      },
+    };
+  }
+
+  const table: TableConfig = {
+    title: `EV OEM Sales & Share Snapshot — ${evPeriod.label} vs ${priorEvL}`,
+    subtitle: "EV volume · share within reported EV universe",
+    rows,
+    total,
+    curLabel: evPeriod.label,
+    priorLabel: priorEvL,
+  };
 
   return (
     <>
@@ -792,54 +1040,33 @@ function EvTab({ view, pt, period, setPeriod }: { view: ViewModel; pt: PeriodTyp
       )}
       <div className="kpis" style={{ marginTop: frozen ? 12 : 0 }}>
         <Kpi label="EV Volume" value={fmtUnitsCompact(evInd?.v)} cmp={yoyNode(evInd)} scope={evPeriod.label} />
-        <Kpi label="EV YoY" value={evInd?.yoy == null ? "—" : fmtPct(evInd.yoy)} scope={`vs ${labelFor(axis, priorKey(pt, key))}`} />
+        <Kpi label="EV YoY" value={evInd?.yoy == null ? "—" : fmtPct(evInd.yoy)} scope={`vs ${priorEvL}`} />
         <Kpi
-          label="EV Share of 2W Universe"
+          label="EV Penetration"
           value={fmtShare(pen)}
           cmp={pen != null && penPrior != null ? <Delta text={`${fmtPp(pen - penPrior)} YoY`} dir={deltaDir(pen - penPrior)} /> : undefined}
-          scope="EV penetration"
-          caveat={view.meta.share_caveat + " Pure-EV makers outside SIAM are excluded, so this understates EV."}
+          scope="within reported SIAM universe"
+          caveat="EV penetration within reported SIAM universe. Pure-EV makers outside SIAM are excluded, so this understates EV."
         />
         <Kpi label="ICE Volume" value={fmtUnitsCompact(ice.v)} scope={evPeriod.label} />
         <Kpi label="ICE Share" value={pen == null ? "—" : fmtShare(1 - pen)} scope="of reported universe" />
       </div>
 
-      <div className={`mainrow ${norail ? "norail" : ""}`}>
-        {!norail && <PeriodRail axis={axis} pt={pt} periodKey={period.key} onChange={setPeriod} />}
-        <WidgetCard
-          title="EV vs ICE — share of reported 2W universe"
-          subtitle={`SIAM reported universe · to ${evPeriod.label}`}
-          footer="EV = blue accent · ICE = muted blue-grey · share within reported SIAM universe"
-        >
-          {evPoints.some((p) => p.value !== null) ? (
-            <TrendChart
-              series={[
-                { name: "EV", color: EV_LINE, points: evPoints },
-                { name: "ICE", color: ICE_LINE, points: icePoints },
-              ]}
-              yFormat={(n) => (n * 100).toFixed(0) + "%"}
-              domain={[0, 1]}
-              ariaLabel="EV vs ICE share trend"
-            />
-          ) : (
-            <Empty />
-          )}
-        </WidgetCard>
-        <WidgetCard title={`EV makers — ${evPeriod.label}`} subtitle="Share within reported EV universe">
-          {rows.length ? (
-            <ComparisonTable
-              rows={rows}
-              total={total}
-              curLabel={evPeriod.label}
-              priorLabel={labelFor(axis, priorKey(pt, key))}
-              mode="both"
-              onSelect={() => {}}
-            />
-          ) : (
-            <Empty />
-          )}
-        </WidgetCard>
-      </div>
+      <AnalyticalTab
+        axis={axis}
+        pt={pt}
+        period={period}
+        setPeriod={setPeriod}
+        oem={oem}
+        setOem={setOem}
+        mode={mode}
+        setMode={setMode}
+        table={table}
+        chart={chart}
+        setHoverOem={setHoverOem}
+        rangeIdx={rangeIdx}
+        setRangeIdx={setRangeIdx}
+      />
     </>
   );
 }
@@ -852,6 +1079,8 @@ function ProdTab({
   setPeriod,
   oem,
   setOem,
+  mode,
+  setMode,
 }: {
   view: ViewModel;
   pt: PeriodType;
@@ -859,27 +1088,116 @@ function ProdTab({
   setPeriod: (v: string) => void;
   oem: string;
   setOem: (v: string) => void;
+  mode: DisplayMode;
+  setMode: (v: DisplayMode) => void;
 }) {
+  const [rangeIdx, setRangeIdx] = useState(1);
+  const [hoverOem, setHoverOem] = useState<string | null>(null);
   const axis = view.periods[pt];
   const TOTAL = view.meta.industry_total_label;
-  const catShort = view.meta.category; // "2W" | "PV" | ...
   const key = period.key;
   const priorL = labelFor(axis, priorKey(pt, key));
   const expInd = pick(view, TOTAL, "export", "all", pt, key);
-  const norail = pt === "year";
-
   const exp = buildTable(view, { flow: "export", powertrain: "all", periodType: pt, periodKey: key, totalLabel: TOTAL });
 
-  // Production exists only where the source reports it (2W: File 2, 2026-01+). Categories
-  // with no production flow render it unavailable.
+  // Production is featured only where it is a proper source-reported series — Commercial
+  // Vehicles (quarterly-native). Other categories (2W's limited add-on, PV, 3W) render an
+  // honest unavailable state rather than a thin/zero table. Never derive monthly from quarterly.
+  const quarterly = view.meta.native_frequency === "quarter";
+  const prodSupported = view.meta.has_production && quarterly;
   const prodFirst = view.meta.production_first_period;
   const prodAxis = axis.filter((p) => !prodFirst || p.date >= prodFirst);
-  const prodPeriod = view.meta.has_production
-    ? prodAxis.find((p) => p.key === key) ?? prodAxis[prodAxis.length - 1]
-    : undefined;
+  const prodPeriod = prodSupported ? prodAxis.find((p) => p.key === key) ?? prodAxis[prodAxis.length - 1] : undefined;
   const prod = prodPeriod
     ? buildTable(view, { flow: "production", powertrain: "all", periodType: pt, periodKey: prodPeriod.key, totalLabel: TOTAL })
     : { rows: [], total: null };
+
+  const [metric, setMetric] = useState<"exports" | "production">(() =>
+    prodSupported && exp.rows.length === 0 ? "production" : "exports",
+  );
+  const isExports = metric === "exports";
+  const win = trendWindow(pt, rangeIdx);
+
+  let table: TableConfig;
+  let chart: ChartConfig;
+  if (!isExports && !prodSupported) {
+    // Honest unavailable production state — same workspace, no empty table / zeros / estimates.
+    table = {
+      title: `OEM Production Snapshot — ${view.meta.category_label}`,
+      rows: [],
+      total: null,
+      curLabel: "",
+      priorLabel: "",
+      unavailable: (
+        <div className="unavail">
+          <strong>Production data is not available for this category</strong>
+          <span>
+            Production data is not available for {view.meta.category_label.toLowerCase()} in the current source. Select
+            Commercial Vehicles or switch to Exports.
+          </span>
+        </div>
+      ),
+    };
+    chart = {
+      title: `Production Trend — ${view.meta.category_label}`,
+      subtitle: "Coverage",
+      footer: "Production is source-reported quarterly (Commercial Vehicles)",
+      lines: [],
+      valueKind: "volume",
+      yLabel: "Production (units)",
+      showYoY: pt !== "year",
+      focusName: null,
+      lockedName: null,
+      emptyNote: (
+        <div className="unavail">
+          <strong>No production series for {view.meta.category_label}</strong>
+          <span>
+            The current source does not report {view.meta.category_label.toLowerCase()} production. Switch to Exports, or
+            select Commercial Vehicles for source-reported quarterly production.
+          </span>
+        </div>
+      ),
+      onLock: () => {},
+    };
+  } else {
+    const flow: Flow = isExports ? "export" : "production";
+    const curPeriod = isExports ? period : prodPeriod!;
+    const curPriorL = labelFor(axis, priorKey(pt, curPeriod.key));
+    const data = isExports ? exp : prod;
+    const chartAxis = isExports ? axis : prodAxis;
+    const winAxis = chartAxis.slice(-Math.min(chartAxis.length, win));
+    const top3 = data.rows.slice(0, 3).map((r) => r.company);
+    const baseNames = oem ? [oem] : top3;
+    const extra = hoverOem && !baseNames.includes(hoverOem) ? [hoverOem] : [];
+    const lines = buildTrendLines(view, [...baseNames, ...extra], baseNames, flow, "all", pt, winAxis, chartAxis, "volume");
+    const metricLabel = isExports ? "Export" : "Production";
+    table = {
+      title: isExports
+        ? `OEM Export Snapshot — ${curPeriod.label} vs ${curPriorL}`
+        : `OEM Production Snapshot — ${curPeriod.label} vs ${curPriorL}`,
+      subtitle: isExports ? "Wholesale exports · SIAM reported universe" : "Source-reported quarterly production",
+      rows: data.rows,
+      total: data.total,
+      curLabel: curPeriod.label,
+      priorLabel: curPriorL,
+    };
+    chart = {
+      title: `${metricLabel} Trend — ${oem ? shortName(oem) : "Top OEMs"}`,
+      info: isExports
+        ? "Wholesale export volumes within the reported SIAM universe."
+        : "Source-reported quarterly production volumes. Not derived from monthly figures.",
+      subtitle: isExports ? "Wholesale export volume over time" : "Source-reported quarterly production over time",
+      footer: isExports ? "Source: SIAM wholesale dispatches (exports)" : "Source-reported quarterly production",
+      lines,
+      valueKind: "volume",
+      yLabel: isExports ? "Exports (units)" : "Production (units)",
+      showYoY: pt !== "year",
+      focusName: hoverOem,
+      lockedName: oem || null,
+      summary: oem ? focusSummary(lines.find((l) => l.name === oem), "volume") : null,
+      onLock: (name) => setOem(name),
+    };
+  }
 
   return (
     <>
@@ -892,13 +1210,13 @@ function ProdTab({
         />
         <Kpi label="Export YoY" value={expInd?.yoy == null ? "—" : fmtPct(expInd.yoy)} scope={`vs ${priorL}`} />
         <Kpi
-          label={`Production (${catShort})`}
-          value={prodPeriod ? fmtUnitsCompact(pick(view, TOTAL, "production", "all", pt, prodPeriod.key)?.v) : "—"}
-          scope={prodPeriod ? prodPeriod.label : "unavailable"}
+          label="Production"
+          value={prodSupported && prodPeriod ? fmtUnitsCompact(pick(view, TOTAL, "production", "all", pt, prodPeriod.key)?.v) : "—"}
+          scope={prodSupported && prodPeriod ? prodPeriod.label : "CV only"}
           caveat={
-            view.meta.has_production
-              ? `${catShort} production is reported only from ${prodFirst ? monthYear(prodFirst) : "recently"} (monthly SIAM). Earlier periods are not available.`
-              : `Production is not reported for ${view.meta.category_label.toLowerCase()} in this source. Exports remain available.`
+            prodSupported
+              ? "Source-reported quarterly production (Commercial Vehicles)."
+              : `Production is reported only for Commercial Vehicles (source-reported quarterly). Not available for ${view.meta.category_label.toLowerCase()}.`
           }
         />
         <Kpi
@@ -908,50 +1226,33 @@ function ProdTab({
         />
       </div>
 
-      <div className={`mainrow ${norail ? "norail" : ""}`}>
-        {!norail && <PeriodRail axis={axis} pt={pt} periodKey={period.key} onChange={setPeriod} />}
-        <WidgetCard title={`Exports by OEM — ${period.label} vs ${priorL}`} subtitle="Wholesale exports · SIAM reported universe">
-          {exp.rows.length ? (
-            <ComparisonTable
-              rows={exp.rows}
-              total={exp.total}
-              curLabel={period.label}
-              priorLabel={priorL}
-              mode="both"
-              selected={oem}
-              onSelect={(c) => setOem(c === oem ? "" : c)}
-            />
-          ) : (
-            <Empty />
-          )}
-        </WidgetCard>
-        <WidgetCard title={`Production (${catShort})`} subtitle="Maker-level · monthly SIAM">
-          {prodPeriod && prod.rows.length ? (
-            <>
-              <div className="unavail" style={{ marginBottom: 12 }}>
-                <strong>Limited coverage</strong>
-                <span>
-                  {catShort} production is reported only from {monthYear(prodFirst!)}. Earlier periods are not in the source
-                  and are not shown as zero.
-                </span>
-              </div>
-              <ComparisonTable
-                rows={prod.rows}
-                total={prod.total}
-                curLabel={prodPeriod.label}
-                priorLabel={labelFor(axis, priorKey(pt, prodPeriod.key))}
-                mode="absolute"
-                onSelect={() => {}}
-              />
-            </>
-          ) : (
-            <Unavailable title={`Production data is not available for ${view.meta.category_label}`}>
-              The current source workbook does not report {view.meta.category_label.toLowerCase()} production for this
-              period. Export analysis remains available. Production will appear only after a validated source is connected.
-            </Unavailable>
-          )}
-        </WidgetCard>
+      <div className="periodnav" style={{ justifyContent: "flex-end" }}>
+        <span style={{ fontSize: 11, color: "var(--text-muted)", alignSelf: "center", marginRight: 2 }}>Metric</span>
+        <div className="seg mini" role="group" aria-label="Metric">
+          <button className={isExports ? "active" : ""} onClick={() => setMetric("exports")}>
+            Exports
+          </button>
+          <button className={!isExports ? "active" : ""} onClick={() => setMetric("production")}>
+            Production
+          </button>
+        </div>
       </div>
+
+      <AnalyticalTab
+        axis={axis}
+        pt={pt}
+        period={period}
+        setPeriod={setPeriod}
+        oem={oem}
+        setOem={setOem}
+        mode={mode}
+        setMode={setMode}
+        table={table}
+        chart={chart}
+        setHoverOem={setHoverOem}
+        rangeIdx={rangeIdx}
+        setRangeIdx={setRangeIdx}
+      />
     </>
   );
 }

@@ -1,25 +1,30 @@
-// Interactive market-share trend (Sales tab only). Inline SVG + HTML tooltip overlay.
-// Hover inspects a period (crosshair + tooltip + enlarged active point); hovering a line,
-// legend item, or (via props) a table row focuses that OEM — champagne gold + thicker
-// stroke, all other lines fade to 30%. Click a line/legend locks focus; Reset restores the
-// Top-OEMs view. Only subtle 120-160ms opacity/stroke transitions — no shadows or motion.
+// Interactive focus-trend chart — shared across Sales, EV vs ICE and Production & Exports.
+// Inline SVG + HTML tooltip overlay. Hover inspects a period (crosshair + tooltip + enlarged
+// active point); hovering a line, legend item, or (via props) a table row focuses that series
+// — copper + thicker stroke, all other lines fade. Click a line/legend locks focus; Reset
+// restores the default view. Plots either shares (%) or absolute volumes (`valueKind`), with
+// an identical tooltip. Only subtle 120-160ms opacity/stroke transitions — no shadows.
 
 import { useRef, useState } from "react";
-import { fmtPp, fmtShare } from "../lib/format";
+import { fmtPct, fmtPp, fmtShare, fmtUnits, fmtUnitsCompact } from "../lib/format";
 
-// Focus/highlight colour is theme-driven (light: primary blue, dark: pale blue). SVG
-// presentation attributes don't resolve CSS var() reliably, so theme colours are applied
-// via inline `style` throughout this component.
+// Focus/highlight colour is theme-driven. SVG presentation attributes don't resolve CSS
+// var() reliably, so theme colours are applied via inline `style` throughout this component.
 const FOCUS = "var(--chart-focus)";
+
+export type ValueKind = "share" | "volume";
 
 export interface TrendPoint {
   label: string; // period label, e.g. "Jan '26" / "FY24"
-  value: number | null; // share (fraction)
-  prevChg: number | null; // pp vs previous period (fraction)
-  yoyChg: number | null; // pp vs same period last year (fraction)
+  value: number | null; // plotted metric — share (fraction) or absolute volume
+  abs: number | null; // absolute volume (tooltip)
+  share: number | null; // share fraction (tooltip)
+  yoy: number | null; // YoY growth fraction (tooltip)
+  prevChg: number | null; // share pp change vs previous period
+  yoyChg: number | null; // share pp change vs same period last year
 }
 export interface TrendLine {
-  name: string; // canonical company
+  name: string; // canonical company / series key
   display: string; // short display name
   color: string; // base colour (distinct per rank)
   points: TrendPoint[];
@@ -35,16 +40,22 @@ export function ShareTrendChart({
   focusName,
   lockedName,
   showYoY,
+  valueKind = "share",
   yLabel = "Market share (%)",
+  domain,
   onLock,
 }: {
   lines: TrendLine[];
   focusName: string | null; // external focus (e.g. table-row hover)
-  lockedName: string | null; // locked OEM (single-focus)
+  lockedName: string | null; // locked series (single-focus)
   showYoY: boolean; // false for Yearly (prev period == last year)
+  valueKind?: ValueKind; // share → % axis; volume → compact-unit axis
   yLabel?: string;
+  domain?: [number, number]; // fixed y-domain (e.g. [0,1] for complementary EV/ICE shares)
   onLock: (name: string) => void;
 }) {
+  const fmtVal = (v: number) => (valueKind === "share" ? fmtShare(v) : fmtUnitsCompact(v));
+  const fmtTick = (v: number) => (valueKind === "share" ? (v * 100).toFixed(0) + "%" : fmtUnitsCompact(v));
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [plotHover, setPlotHover] = useState<string | null>(null); // nearest line under cursor
@@ -65,9 +76,13 @@ export function ShareTrendChart({
 
   let min = Math.min(...vals);
   let max = Math.max(...vals);
-  const pad = (max - min) * 0.15 || Math.abs(max) * 0.1 || 0.01;
-  min = Math.max(0, min - pad);
-  max += pad;
+  if (domain) {
+    [min, max] = domain;
+  } else {
+    const pad = (max - min) * 0.15 || Math.abs(max) * 0.1 || 0.01;
+    min = Math.max(0, min - pad);
+    max += pad;
+  }
 
   const x = (i: number) => padL + (i / (n - 1)) * (W - padL - padR);
   const y = (v: number) => padT + (1 - (v - min) / (max - min)) * (H - padT - padB);
@@ -142,7 +157,7 @@ export function ShareTrendChart({
   let tipStyle: React.CSSProperties | undefined;
   if (tip && tipPoint && tipPoint.value != null) {
     const left = tip.x > tip.w * 0.62 ? tip.x - 172 : tip.x + 16;
-    const top = Math.max(4, Math.min(tip.h - 96, tip.y - 20));
+    const top = Math.max(4, Math.min(tip.h - 132, tip.y - 20));
     tipStyle = { left, top };
   }
 
@@ -162,7 +177,7 @@ export function ShareTrendChart({
             <g key={i}>
               <line x1={padL} x2={W - padR} y1={y(tv)} y2={y(tv)} style={{ stroke: "var(--chart-grid)" }} strokeWidth={1} />
               <text x={padL - 10} y={y(tv) + 3} textAnchor="end" fontSize={10} style={{ fill: "var(--chart-axis)" }}>
-                {(tv * 100).toFixed(0)}%
+                {fmtTick(tv)}
               </text>
             </g>
           ))}
@@ -241,7 +256,7 @@ export function ShareTrendChart({
                       fontWeight={isFocus ? 600 : 500}
                       style={{ fill: stroke }}
                     >
-                      {l.display} {fmtShare(l.points[li].value)}
+                      {l.display} {fmtVal(l.points[li].value!)}
                     </text>
                   </>
                 )}
@@ -265,15 +280,29 @@ export function ShareTrendChart({
           )}
         </svg>
 
-        {/* tooltip */}
+        {/* tooltip — identical field set across all pages */}
         {tipStyle && tipPoint && (
           <div className="trend-tip" style={tipStyle}>
             <div className="tt-name">{focusLine!.display}</div>
             <div className="tt-period">{labels[hoverIdx!]}</div>
-            <div className="tt-row">
-              <span>Market share</span>
-              <b>{fmtShare(tipPoint.value)}</b>
-            </div>
+            {tipPoint.abs != null && (
+              <div className="tt-row">
+                <span>Volume</span>
+                <b>{fmtUnits(tipPoint.abs)}</b>
+              </div>
+            )}
+            {tipPoint.yoy != null && (
+              <div className="tt-row">
+                <span>YoY</span>
+                <b className={ppClass(tipPoint.yoy)}>{fmtPct(tipPoint.yoy)}</b>
+              </div>
+            )}
+            {tipPoint.share != null && (
+              <div className="tt-row">
+                <span>Share</span>
+                <b>{fmtShare(tipPoint.share)}</b>
+              </div>
+            )}
             <div className="tt-row">
               <span>vs prev period</span>
               <b className={ppClass(tipPoint.prevChg)}>{tipPoint.prevChg == null ? "—" : fmtPp(tipPoint.prevChg)}</b>
