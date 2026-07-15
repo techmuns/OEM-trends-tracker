@@ -44,9 +44,12 @@ jobs:
         if: success()
         run: |
           if [ -n "$(git status --porcelain data/)" ]; then
+            # refresh the served view-model so the committed dist/ shows fresh data
+            # (UI code is unchanged, so no rebuild is needed)
+            cp data/bundle/2w.json dist/data/2w.json
             git config user.name "oem-tracker-bot"
             git config user.email "actions@github.com"
-            git add data/
+            git add data/ dist/data/2w.json
             git commit -m "ingest: automated data update [skip ci]"
             git push
           else

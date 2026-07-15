@@ -1,0 +1,12 @@
+# Cloudflare Pages configuration.
+#
+# The built dashboard is COMMITTED to ./dist and served as static assets — there is no
+# build step on Cloudflare (no Node/pnpm needed at deploy time, no build command to
+# configure). Cloudflare reads the output dir below, finds the committed dist/, and serves
+# it. The monthly ingest workflow refreshes dist/data/2w.json so the deployed data stays
+# current without rebuilding the UI.
+#
+# To change UI CODE (not data): rebuild and commit dist -> `bash scripts/build-site.sh`.
+
+name = "oem-tracker"
+pages_build_output_dir = "dist"

@@ -83,23 +83,22 @@ the monthly cron keeps data fresh with no further action.
 The repo lives at `techmuns/oem-trends-tracker`. Ensure `main` is pushed.
 
 ### 2. Connect Cloudflare Pages
+The built dashboard is **committed to `dist/`** and served directly — **no build step runs on
+Cloudflare** (no Node/pnpm, no build command to set). This is deliberate: a Pages project
+with a build command left unset skips the build and fails with *"output directory dist not
+found"*, so we remove that failure mode entirely.
+
 1. Cloudflare Dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
 2. Select this GitHub repository and the **`main`** branch (production branch).
-3. Set the **build configuration** in the dashboard (there is intentionally **no
-   `wrangler.toml`** — a Pages `wrangler.toml` with an output dir but no build command makes
-   Cloudflare skip the build and fail with *"output directory dist not found"*). Set:
-   - **Framework preset:** `None`
-   - **Build command:** `bash scripts/build-site.sh` — builds the React app in `ui/` and
-     serves the committed view-model at `/data/2w.json`. **This must be set**, or Cloudflare
-     skips the build and there is no `dist/` (it is generated, not committed).
-   - **Build output directory:** `dist`
-   - **Root directory:** `/`
-   - Node version is pinned by [`.node-version`](.node-version) (22); pnpm is auto-detected.
-4. Save and deploy. Every push to `main` now auto-deploys.
+3. Leave the **Build command empty**. [`wrangler.toml`](wrangler.toml) sets the output
+   directory to `dist`, which is committed — Cloudflare finds it and serves it.
+4. Save and deploy. Every push to `main` auto-deploys the committed `dist/`.
 
-> If a build already failed: open the project → **Settings → Builds & deployments → Build
-> configuration → Edit**, set the Build command and Output directory above, then **Retry
-> deployment**.
+**Keeping it fresh:**
+- **Data** updates automatically — the monthly ingest workflow refreshes `dist/data/2w.json`
+  and commits it, so the deployed dashboard shows current data with no rebuild.
+- **UI code** changes are rebuilt and committed explicitly: `bash scripts/build-site.sh`
+  regenerates `dist/`; commit it.
 
 ### 3. Environment variables / secrets
 - **Phase 0:** none required. The build is static.
