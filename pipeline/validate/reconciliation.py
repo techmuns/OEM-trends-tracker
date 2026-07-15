@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 
-from pipeline.contract.constants import COMPANY_HISTORY_FLOOR
+from pipeline.contract.constants import COMPANY_HISTORY_FLOOR, INDUSTRY_TOTAL_CANONICAL
 from pipeline.contract.models import ContractRow
 
 # series identity used to line up monthly rows with reported quarterly values
@@ -93,13 +93,17 @@ def _classify(kind: str, label: str, part: float, total: float, month: date) -> 
 
 
 def reconcile_segment_sums(
-    rows: list[ContractRow], recon: ReconciliationData
+    rows: list[ContractRow],
+    recon: ReconciliationData,
+    known_overshoots: set[tuple[str, str | None, date]] | None = None,
 ) -> tuple[list[Mismatch], list[Mismatch]]:
     """(a) Σ company `all` rows per (flow, segment, month) vs the segment Total.
 
     Returns (hard_overshoots, expected_gaps). Companies are a subset of the reported
-    segment total, so an undershoot is expected; only an overshoot is a hard error.
+    segment total, so an undershoot is expected; only an overshoot is a hard error — unless
+    it is a documented source overshoot (see KNOWN_SOURCE_OVERSHOOTS), which is acknowledged.
     """
+    known = known_overshoots or set()
     sums: dict[tuple[str, str, date], float] = {}
     for r in rows:
         if (
@@ -107,6 +111,7 @@ def reconcile_segment_sums(
             or r.segment is None
             or r.period_type.value != "month"
             or r.value is None
+            or r.company_canonical == INDUSTRY_TOTAL_CANONICAL  # the reported total, not a maker
         ):
             continue
         k = (r.flow.value, r.segment, r.period_date)
@@ -122,18 +127,26 @@ def reconcile_segment_sums(
             m = _classify("segment_sum", f"{flow}/{segment}", got, total, month)
             if m is None:
                 continue
-            (hard if m.kind == "overshoot" else expected).append(m)
+            if m.kind == "overshoot" and (flow, segment, month) in known:
+                expected.append(Mismatch("acknowledged_overshoot", m.detail))
+            elif m.kind == "overshoot":
+                hard.append(m)
+            else:
+                expected.append(m)
     return hard, expected
 
 
 def reconcile_industry_totals(
     recon: ReconciliationData,
+    known_overshoots: set[tuple[str, str | None, date]] | None = None,
 ) -> tuple[list[Mismatch], list[Mismatch]]:
     """(b) Σ segment totals per (flow, month) vs the industry Total row.
 
     The industry Total is a reported figure that includes makers not broken out into the
-    listed segments, so Σsegments <= industry Total; only an overshoot is a hard error.
+    listed segments, so Σsegments <= industry Total; only an overshoot is a hard error —
+    unless it is a documented source overshoot (see KNOWN_SOURCE_OVERSHOOTS).
     """
+    known = known_overshoots or set()
     seg_sum: dict[tuple[str, date], float] = {}
     for (flow, _segment), monthly in recon.segment_totals.items():
         for month, val in monthly.items():
@@ -150,7 +163,12 @@ def reconcile_industry_totals(
             m = _classify("industry_total", f"{flow}", got, total, month)
             if m is None:
                 continue
-            (hard if m.kind == "overshoot" else expected).append(m)
+            if m.kind == "overshoot" and (flow, None, month) in known:
+                expected.append(Mismatch("acknowledged_overshoot", m.detail))
+            elif m.kind == "overshoot":
+                hard.append(m)
+            else:
+                expected.append(m)
     return hard, expected
 
 

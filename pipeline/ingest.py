@@ -57,6 +57,7 @@ def detect_adapters(path: Path, ts: datetime) -> list[tuple[str, SourceAdapter]]
         return [
             ("2W", ExcelSparkAdapter(path, ingest_date=ts)),
             ("PV", NestedBlockAdapter("PV", path, ingest_date=ts)),
+            ("3W", NestedBlockAdapter("3W", path, ingest_date=ts)),
         ]
     if FILE2_SHEET in sheets and "Passenger Vehicle" in sheets:
         return [("2W", SiamMonthlyAdapter(path, ingest_date=ts))]
@@ -81,10 +82,12 @@ def _notes(category: str, live) -> str:
             "extends maker-level totals past it. EV-vs-ICE and segments end "
             f"{FILE1_LAST_PERIOD}; maker values differ up to ~18% at the seam (File 1 not superseded)."
         )
-    if category == "PV":
+    if category in ("PV", "3W"):
+        label = "PV" if category == "PV" else "3W"
         return (
             f"Data through {latest}. Source: SIAM wholesale dispatches. EV is not derivable "
-            "for PV — EV-only makers sit inline among ICE makers, so EV volume/share is not shown."
+            f"for {label} — EV-only makers sit inline among ICE makers, so EV volume/share is "
+            "not shown."
         )
     return f"Data through {latest}. Source: SIAM wholesale dispatches."
 

@@ -12,7 +12,13 @@
 #   has_production      whether this category carries a production flow
 #   sheet               source sheet in File 1
 #   region_end          label that ends this category's region (exclusive)
-#   industry_totals     flow -> the reported industry-total row label (ingested as reported)
+#   industry_totals     flow -> the reported industry-total row label (ingested as reported).
+#                       Omit when the source has no single industry-total row for the flow.
+#   industry_from_segment_totals
+#                       true when there is NO single industry-total row: the industry total
+#                       is the sum of the REPORTED per-segment totals (still reported figures,
+#                       never a maker-sum). Used by 3W (domestic = Passenger total + Goods total).
+#   region_end          omit for the last region on the sheet (parse runs to the end).
 #   segments            flow -> { segment-header-label: {segment, terminator} }
 #                       terminators differ per segment/flow (e.g. "PC Volumes", not "Total").
 
@@ -47,3 +53,22 @@ categories:
         "Passenger Cars (Export)": { segment: PC, terminator: "Total Export Passenger Cars" }
         "Utility Vehicles (Export)": { segment: UV, terminator: "Total Export UV" }
         "Vans (Export)": { segment: Van, terminator: "Total Export Vans" }
+
+  "3W":
+    label: Three-Wheelers
+    source: SIAM
+    native_frequency: month
+    has_ev: false # EV-only makers (Mahindra Electric, TI Clean Mobility, Pinnacle) sit inline
+    has_production: false
+    sheet: "OEM - Summary - 2W, PV, 3W"
+    region_start: "THREE WHEELERS"
+    # region_end omitted: 3W is the last region on the sheet — parse runs to the end.
+    # No single "Total 3W" row exists; the industry total is the sum of the reported segment
+    # totals (Passenger total + Goods total for domestic). Still reported, never a maker-sum.
+    industry_from_segment_totals: true
+    segments:
+      domestic:
+        "Passenger 3W": { segment: Passenger, terminator: "Passenger total" }
+        "Goods 3W": { segment: Goods, terminator: "Goods total" }
+      export:
+        "Exports - Passenger 3W": { segment: Passenger, terminator: "Total Exports Passenger" }

@@ -185,3 +185,27 @@ companies:
   - canonical: Volkswagen India
     category_hint: PV
     aliases: [Volkswagen India Pvt Ltd]
+
+  # --- Three-Wheelers (Phase 4) ---
+  # Same rule as PV: EV is NOT derivable. EV-only 3W makers (Mahindra Electric, TI Clean
+  # Mobility/Montra, Pinnacle) sit inline among ICE makers and are flagged is_ev_only for
+  # display only — never summed into an EV total. Bajaj, Mahindra & Mahindra, Force Motors,
+  # Piaggio, TVS and Mahindra Electric reuse their existing canonicals (raw "…Ltd" spellings
+  # already resolve). New 3W-only makers are added below.
+  - canonical: Atul Auto
+    category_hint: 3W
+    aliases: [Atul Auto Limited]
+  - canonical: Continental Engines
+    category_hint: 3W
+    aliases: [Continental Engines Pvt Ltd]
+  - canonical: Scooters India
+    category_hint: 3W
+    aliases: [Scooters India Ltd]
+  - canonical: TI Clean Mobility
+    category_hint: 3W
+    is_ev_only: true # Murugappa/Montra Electric — EV 3W only
+    aliases: [TI Clean Mobility Pvt Ltd]
+  - canonical: Pinnacle Mobility Solutions
+    category_hint: 3W
+    is_ev_only: true # Pinnacle (Ecodryft) — EV 3W only
+    aliases: [Pinnacle Mobility Solutions Pvt Ltd]

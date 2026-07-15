@@ -91,10 +91,33 @@ unresolved maker → **hard fail**, `0 ≠ blank` (`"NA"`/`"N/A"`/`"-"` = absenc
 `categories.json` into the committed `dist/data/`, not just `2w.json`. No build step at
 deploy time — Cloudflare serves the committed `dist/`.
 
-## 7. Next categories (later PRs)
+## 7. Three-Wheelers (3W) — second category
 
-- **3W** — same `NestedBlockAdapter` + a `3W` block in `categories.yaml` (EV also not
-  derivable → same inline-maker treatment).
+3W reused the same `NestedBlockAdapter` and needed **no UI code change** — the category
+switch, EV-unavailable state, and caveats are all data-driven, so 3W appeared just by
+adding its config + data. It did surface two new wrinkles, handled generically:
+
+- **No single "Total 3W" row.** Unlike PV, the source reports only per-segment totals
+  ("Passenger total", "Goods total", "Total Exports Passenger") and there is no domestic
+  export-goods segment. Added `industry_from_segment_totals: true`: the adapter emits each
+  reported segment total as an `INDUSTRY_TOTAL_CANONICAL` row (keeping its segment so the two
+  domestic totals have distinct grain keys and aren't deduped by revision logic); the
+  view-model sums them per flow. The industry total is still **reported**, never a maker-sum.
+  Segment reconciliation excludes the industry row so it can't inflate the maker sum.
+- **A documented source overshoot.** In May-2023 the listed export-Passenger makers sum to
+  26,989 but the reported total is 22,997 — a mis-keyed TVS cell in the manually-maintained
+  workbook, not a parser double-count. Added `KNOWN_SOURCE_OVERSHOOTS` (mirroring
+  `KNOWN_MISSING_MONTHS`): a reviewed, documented exception the gate reports as
+  *acknowledged* without failing ingest. Any **new/unlisted** overshoot still hard-fails.
+
+3W results: **3,540 rows**, `powertrain=all` only, 11 makers (3 EV-only: Mahindra Electric,
+TI Clean Mobility, Pinnacle Mobility), segments `{Passenger, Goods}`, industry from Apr-2012,
+`region_end` omitted (3W is the last region on the sheet — parse runs to the end). Quarter
+reconciliation 983/983, one acknowledged overshoot, `has_ev=false`. Sanity: Dec-2025 domestic
+3W = 60,641 units, Bajaj Auto 60.7% share.
+
+## 8. Next categories (later PRs)
+
 - **CV** — quarterly-native (`native_frequency=quarter`), has a production flow.
 - **Tractors** — **confirm the source is not SIAM/TMA before building**; merged-cell
   forward-fill expected. Blocked on source confirmation.

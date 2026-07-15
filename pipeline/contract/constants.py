@@ -67,6 +67,19 @@ KNOWN_MISSING_MONTHS: dict[str, str] = {
 # A magnitude beyond this cap for a single monthly cell is treated as absurd -> fail.
 ABSURD_MONTHLY_MAGNITUDE = 5_000_000  # units/month for one maker+segment; ~50x the market
 
+# Documented source-data inconsistencies in the manually-maintained summary workbook where
+# the listed makers sum to MORE than the reported segment/industry total for one month. That
+# is a SOURCE error (a mis-keyed cell), not a parser double-count — each entry below has been
+# eyeballed against the workbook. The totals_reconciliation gate reports these without
+# failing ingest; any NEW/unlisted overshoot still hard-fails. Keyed
+# (category, flow, segment_or_None, month_iso).
+KNOWN_SOURCE_OVERSHOOTS: dict[tuple[str, str, str | None, str], str] = {
+    ("3W", "export", "Passenger", "2023-05-01"): (
+        "TVS export Passenger 3W = 14,486 makes Σmakers (26,989) exceed the reported "
+        "Total Exports Passenger (22,997); the TVS cell looks mis-keyed in the source."
+    ),
+}
+
 # --- Coverage floors observed in the source workbook (encode, don't design around) ---
 # Industry totals begin Apr-2012, but company-level rows begin Apr-2014, so company-level
 # market share cannot be computed before FY15. Recorded in docs/contract-coverage.md.

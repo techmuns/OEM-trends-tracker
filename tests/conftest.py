@@ -61,6 +61,20 @@ def real_parse_pv():
 
 
 @pytest.fixture(scope="session")
+def real_parse_3w():
+    """Parse the 3W blocks of the committed File 1 once. Skips if not present."""
+    if not REAL_WORKBOOK.exists():
+        pytest.skip("real workbook data/raw/Auto_Database__Summary__-_Spark.xlsx not present")
+    from pipeline.adapters.excel_nested import NestedBlockAdapter
+
+    adapter = NestedBlockAdapter(
+        "3W", REAL_WORKBOOK, ingest_date=datetime(2026, 7, 15, 9, 0, tzinfo=_IST)
+    )
+    rows = adapter.parse(adapter.fetch("2025-12"))
+    return adapter, rows
+
+
+@pytest.fixture(scope="session")
 def schema() -> dict:
     return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
 

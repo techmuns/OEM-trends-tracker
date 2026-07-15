@@ -32,6 +32,7 @@ from pipeline.contract.constants import (
     ABSURD_MONTHLY_MAGNITUDE,
     INDUSTRY_TOTAL_CANONICAL,
     KNOWN_MISSING_MONTHS,
+    KNOWN_SOURCE_OVERSHOOTS,
     SEAM_INDUSTRY_TOL_ABS,
     SEAM_INDUSTRY_TOL_REL,
 )
@@ -145,12 +146,20 @@ class TotalsReconciliationGate:
         if recon is None:
             return GateResult(self.name, GateStatus.SKIP, "no reconciliation data provided")
         rows = list(ctx.rows)
-        a_hard, a_exc = reconcile_segment_sums(rows, recon)
-        b_hard, b_exc = reconcile_industry_totals(recon)
+        # documented source overshoots for THIS category are acknowledged, not failed
+        category = next((r.category.value for r in rows), None)
+        known = {
+            (flow, seg, date.fromisoformat(month))
+            for (cat, flow, seg, month) in KNOWN_SOURCE_OVERSHOOTS
+            if cat == category
+        }
+        a_hard, a_exc = reconcile_segment_sums(rows, recon, known)
+        b_hard, b_exc = reconcile_industry_totals(recon, known)
         q_match, q_total, q_mis = reconcile_quarters(rows, recon)
         expected = a_exc + b_exc
         unlisted = [m for m in expected if m.kind == "unlisted"]
         pre_fy15 = [m for m in expected if m.kind == "pre_fy15"]
+        acknowledged = [m for m in expected if m.kind == "acknowledged_overshoot"]
         hard = a_hard + b_hard + q_mis  # overshoots (double-counts) + quarter mismatches
         details = {
             "overshoots": [m.detail for m in (a_hard + b_hard)[:10]],
@@ -159,12 +168,14 @@ class TotalsReconciliationGate:
             "quarter_mismatches": [m.detail for m in q_mis[:10]],
             "unlisted_maker_gaps": len(unlisted),
             "pre_fy15_exceptions": len(pre_fy15),
+            "acknowledged_overshoots": [m.detail for m in acknowledged],
             "example_unlisted_gaps": [m.detail for m in unlisted[:3]],
         }
         rate = (q_match / q_total * 100) if q_total else 100.0
+        ack = f", {len(acknowledged)} acknowledged source overshoot(s)" if acknowledged else ""
         msg = (
             f"quarters {q_match}/{q_total} ({rate:.1f}%); {len(hard)} hard; "
-            f"{len(unlisted)} unlisted-maker gaps, {len(pre_fy15)} pre-FY15"
+            f"{len(unlisted)} unlisted-maker gaps, {len(pre_fy15)} pre-FY15{ack}"
         )
         status = GateStatus.PASS if not hard else GateStatus.FAIL
         return GateResult(self.name, status, msg, details)

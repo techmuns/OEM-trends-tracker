@@ -49,6 +49,7 @@ class NestedBlockAdapter(SourceAdapter):
     ) -> None:
         self.category = category
         self.cfg = load_categories()[category]
+        self.industry_from_segments = self.cfg.get("industry_from_segment_totals", False)
         self.source_id = self.cfg.get("source", "SIAM")
         self.source_file = str(source_file)
         self.ingest_date = ingest_date or datetime(2026, 7, 15, 9, 0, tzinfo=_IST)
@@ -71,7 +72,12 @@ class NestedBlockAdapter(SourceAdapter):
             ws = wb[sheet]
             month_cols, quarter_cols = self._read_header(ws)
             start_row = self._find_label(ws, self.cfg["region_start"])
-            end_row = self._find_label(ws, self.cfg["region_end"])
+            # region_end omitted -> this is the last region on the sheet: parse to the end.
+            end_row = (
+                self._find_label(ws, self.cfg["region_end"])
+                if self.cfg.get("region_end")
+                else ws.max_row + 1
+            )
             self.reconciliation = ReconciliationData()
             return self._parse(ws, start_row, end_row, month_cols, quarter_cols)
         finally:
@@ -118,7 +124,7 @@ class NestedBlockAdapter(SourceAdapter):
         for flow, headers in self.cfg["segments"].items():
             for header, spec in headers.items():
                 seg_map[header] = (flow, spec["segment"], spec["terminator"])
-        totals = {lbl: flow for flow, lbl in self.cfg["industry_totals"].items()}
+        totals = {lbl: flow for flow, lbl in self.cfg.get("industry_totals", {}).items()}
         terminators = {t for (_f, _s, t) in seg_map.values()}
 
         rows: list[ContractRow] = []
@@ -139,12 +145,24 @@ class NestedBlockAdapter(SourceAdapter):
                 continue
             if cur_term is not None and label == cur_term:
                 self._record_segment_total(ws, r, cur_flow, cur_seg, month_cols)
+                if self.industry_from_segments:
+                    # No single industry-total row: the reported per-segment totals ARE the
+                    # industry figure. Emit each as an INDUSTRY_TOTAL_CANONICAL row, keeping its
+                    # segment so the two domestic totals (Passenger, Goods) have distinct grain
+                    # keys and are NOT deduped by revision logic. build_view keys by
+                    # (company, flow, powertrain) — segment is not in that key — so they still
+                    # sum per flow into the industry total. Segment reconciliation excludes the
+                    # industry row; quarters aren't recorded for it (would double-count).
+                    rows += self._emit(ws, r, cur_flow, cur_seg, INDUSTRY_TOTAL_CANONICAL, label,
+                                       month_cols, quarter_cols, record_quarters=False)
                 cur_seg = cur_term = None
                 continue
             if label in terminators:
                 continue  # a terminator for a different (already-closed) segment; skip
             if cur_flow is None or cur_seg is None:
-                self.warnings.append(f"PV: stray label outside a segment at row {r}: {label!r}")
+                self.warnings.append(
+                    f"{self.category}: skipped label outside a segment at row {r}: {label!r}"
+                )
                 continue
             # company row
             try:
@@ -155,7 +173,7 @@ class NestedBlockAdapter(SourceAdapter):
         return rows
 
     def _emit(self, ws, row, flow, segment, canonical, raw, month_cols, quarter_cols,
-              record_industry=False) -> list[ContractRow]:
+              record_industry=False, record_quarters=True) -> list[ContractRow]:
         out: list[ContractRow] = []
         for col, d in month_cols.items():
             v = ws.cell(row=row, column=col).value
@@ -167,12 +185,13 @@ class NestedBlockAdapter(SourceAdapter):
             out.append(self._row(d, flow, segment, canonical, raw, float(v)))
             if record_industry:
                 self.reconciliation.industry_totals.setdefault(flow, {})[d] = float(v)
-        skey = (flow, "all", segment, canonical)
-        qmap = self.reconciliation.reported_quarters.setdefault(skey, {})
-        for col, qk in quarter_cols.items():
-            v = ws.cell(row=row, column=col).value
-            if isinstance(v, (int, float)):
-                qmap[qk] = float(v)
+        if record_quarters:
+            skey = (flow, "all", segment, canonical)
+            qmap = self.reconciliation.reported_quarters.setdefault(skey, {})
+            for col, qk in quarter_cols.items():
+                v = ws.cell(row=row, column=col).value
+                if isinstance(v, (int, float)):
+                    qmap[qk] = float(v)
         return out
 
     def _record_segment_total(self, ws, row, flow, segment, month_cols) -> None:
