@@ -323,15 +323,17 @@ export function CompareChart({
               />
             )}
 
-            {/* lines */}
-            {plots.map((p) => {
+            {/* lines — every series stays fully visible in its own blue; the focused one is
+               copper, thicker, and drawn last (on top). No fade-out of the others. */}
+            {[...plots]
+              .sort((a, b) => (a.s.id === focusedId ? 1 : 0) - (b.s.id === focusedId ? 1 : 0))
+              .map((p) => {
               const isFocus = p.s.id === focusedId;
-              const dim = focusedId != null && !isFocus;
               const stroke = isFocus ? FOCUS_COLOR : p.color;
               const segs = segments(p.vals, x, (v) => yOf(v, p.side));
               const li = lastIdx(p.vals);
               return (
-                <g key={p.s.id} className="tline" style={{ opacity: dim ? 0.26 : 1 }} onClick={() => onFocus(p.s.id)}>
+                <g key={p.s.id} className="tline" style={{ opacity: focusedId != null && !isFocus ? 0.9 : 1 }} onClick={() => onFocus(p.s.id)}>
                   {segs.map((d, i) => (
                     <path
                       key={i}

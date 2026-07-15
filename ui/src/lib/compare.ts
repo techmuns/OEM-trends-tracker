@@ -83,17 +83,19 @@ export interface CompareSeries {
   data: Partial<Record<PeriodType, CapPoint[]>>;
 }
 
-// Restrained blue family for comparison lines; the focused series is copper (applied at
-// render time, never stored here).
+// Restrained blue family for comparison lines — eight distinct, sufficiently-bright cool
+// blues that all read against the near-black canvas (the dark --oem-blue/--ice/--steel-blue
+// surface tokens are deliberately NOT used here: they vanish as line colours). The focused
+// series is copper, applied at render time and never stored here.
 export const SERIES_COLORS = [
-  "var(--chart-1)", // pale blue
-  "var(--chart-2)", // muted blue
-  "var(--ev)", // soft OEM blue
-  "var(--soft-blue)",
-  "var(--chart-3)", // blue-grey
-  "var(--oem-blue)",
-  "var(--ice)", // muted blue-grey
-  "var(--steel-blue)",
+  "#d0e3ff", // pale blue
+  "#6e90c9", // soft blue
+  "#a7c1ea", // light periwinkle
+  "#5f86c4", // medium blue
+  "#8fa8d0", // steel blue (light)
+  "#b9cef2", // pale sky
+  "#7f9bd6", // cornflower
+  "#97aac8", // blue-grey
 ];
 export const FOCUS_COLOR = "var(--chart-focus)"; // copper
 
