@@ -26,11 +26,16 @@ def test_six_gates_registered() -> None:
     ]
 
 
-def test_stub_run_accepts_and_all_skip(bundle) -> None:
+def test_clean_fixture_is_accepted(bundle) -> None:
+    # the synthetic fixture (no reconciliation data, no industry-total series, no previous
+    # run) should pass/skip every gate and be accepted.
     report = run_gates(GateContext(rows=bundle.rows))
     assert report.accepted is True
-    assert all(r.status is GateStatus.SKIP for r in report.results)
+    assert not report.failures
     assert "ACCEPTED" in report.summary()
+    by_name = {r.name: r.status for r in report.results}
+    assert by_name["schema_conformance"] is GateStatus.PASS
+    assert by_name["totals_reconciliation"] is GateStatus.SKIP  # no recon data on fixture
 
 
 def test_a_failing_gate_quarantines() -> None:

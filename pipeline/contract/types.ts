@@ -6,13 +6,13 @@
  */
 
 /**
- * OEM Tracker frozen data contract. contract_version 1.0.0. One tidy row per observation (long format). The bundle is the artifact the UI reads. See docs/contract-coverage.md for the widget->field mapping and the non-negotiable rules.
+ * OEM Tracker data contract. contract_version 1.1.0 (Bundle.meta added; ContractRow frozen since 1.0.0). One tidy row per observation (long format). The bundle is the artifact the UI reads. See docs/contract-coverage.md for the widget->field mapping and the non-negotiable rules.
  */
 export interface Bundle {
   /**
-   * Frozen contract version. Bump only on a breaking schema change.
+   * Contract version. 1.1.0 added the Bundle.meta wrapper object; ContractRow is unchanged from 1.0.0.
    */
-  contract_version: "1.0.0";
+  contract_version: "1.1.0";
   /**
    * When this bundle was built. Injected by the builder; never derived from wall-clock inside pure logic.
    */
@@ -21,10 +21,44 @@ export interface Bundle {
    * Human label for share denominators. For SIAM: 'Share within reported SIAM universe'. Lives in the contract, never hardcoded in UI.
    */
   source_universe_label: string;
+  meta: BundleMeta;
   /**
    * The tidy observation rows.
    */
   rows: ContractRow[];
+}
+/**
+ * Bundle-level provenance/freshness metadata (added in 1.1.0). Surfaces coverage and the latest available period so the UI can label freshness loudly.
+ */
+export interface BundleMeta {
+  /**
+   * Category scope of this bundle, e.g. '2W'. Null if the bundle spans multiple categories.
+   */
+  category: string | null;
+  /**
+   * The single source this bundle was built from (one source per bundle).
+   */
+  source: "SIAM" | "VAHAN" | "BROKER" | "MANUAL";
+  /**
+   * Earliest period_date present (first day of period).
+   */
+  coverage_start: string;
+  /**
+   * Latest period_date present (first day of period). The UI's freshness anchor.
+   */
+  latest_period: string;
+  /**
+   * The immutable snapshot this bundle was built from.
+   */
+  snapshot_id: string | null;
+  /**
+   * Number of rows in the bundle.
+   */
+  row_count: number;
+  /**
+   * Freeform provenance note (e.g. 'Data ends Dec-2025; no live feed until Phase 2').
+   */
+  notes: string | null;
 }
 /**
  * One observation. Long format: never one column per month. 0 and null are DISTINCT (0 = source-reported zero / not-launched; null = not reported). Never sum across inclusive dimension values (powertrain all>=ev; flow total>=domestic+export).

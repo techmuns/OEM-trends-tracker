@@ -26,7 +26,7 @@ from pathlib import Path
 
 from pipeline.aggregate.periods import fiscal_quarter_of, fiscal_year_of
 from pipeline.contract.constants import CONTRACT_VERSION, SIAM_UNIVERSE_LABEL
-from pipeline.contract.models import Bundle, ContractRow
+from pipeline.contract.models import Bundle, BundleMeta, ContractRow
 
 IST = timezone(timedelta(hours=5, minutes=30))
 INGEST = datetime(2026, 7, 1, 9, 0, 0, tzinfo=IST)
@@ -271,11 +271,22 @@ def build() -> Bundle:
     )
 
     # validate-by-construction through the pydantic contract models
+    contract_rows = [ContractRow(**r) for r in rows]
+    period_dates = [cr.period_date for cr in contract_rows]
     return Bundle(
         contract_version=CONTRACT_VERSION,
         generated_at=GENERATED_AT,
         source_universe_label=SIAM_UNIVERSE_LABEL,
-        rows=[ContractRow(**r) for r in rows],
+        meta=BundleMeta(
+            category="2W",
+            source="SIAM",
+            coverage_start=min(period_dates),
+            latest_period=max(period_dates),
+            snapshot_id=None,  # synthetic fixture is not tied to a real snapshot
+            row_count=len(contract_rows),
+            notes="Synthetic fixture (fake OEMs) for UI development. Not real data.",
+        ),
+        rows=contract_rows,
     )
 
 

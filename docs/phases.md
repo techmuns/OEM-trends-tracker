@@ -5,9 +5,9 @@ interface (the frozen contract).
 
 | Phase | Goal | State |
 |---|---|---|
-| **0 — Foundation** | Repo, frozen contract, dictionaries, adapter interface, validation framework, aggregation calendar, snapshot/revision store, fixtures, CI/CD, docs | **this repo** |
-| 1 — Backfill | Excel → tidy store (2W first), real gate logic, aggregation logic, first real snapshot + bundle | next |
-| 2 — Live ingest | Source adapters (SIAM / VAHAN / file-drop), revision handling, monthly cron, quarantine + alert | later |
+| **0 — Foundation** | Repo, frozen contract, dictionaries, adapter interface, validation framework, aggregation calendar, snapshot/revision store, fixtures, CI/CD, docs | done |
+| **1 — Backfill** | File 1 → tidy store (2W), real gate logic, aggregation, first real snapshot + bundle (`latest_period` Dec-2025) | **done — see [phase1-report.md](phase1-report.md)** |
+| 2 — Live ingest | Source adapters (SIAM / VAHAN / file-drop), revision handling, monthly cron, quarantine + alert | next |
 | 3 — Dashboard UI | Munshot embedded dashboard reading the frozen bundle | later |
 
 ## Phase 0 — what's built (and what is deliberately NOT)

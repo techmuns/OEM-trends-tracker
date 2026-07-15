@@ -1,7 +1,16 @@
 {
-  "contract_version": "1.0.0",
+  "contract_version": "1.1.0",
   "generated_at": "2026-07-01T09:05:00+05:30",
   "source_universe_label": "Share within reported SIAM universe",
+  "meta": {
+    "category": "2W",
+    "source": "SIAM",
+    "coverage_start": "2024-07-01",
+    "latest_period": "2026-06-01",
+    "snapshot_id": null,
+    "row_count": 202,
+    "notes": "Synthetic fixture (fake OEMs) for UI development. Not real data."
+  },
   "rows": [
     {
       "period_date": "2024-07-01",

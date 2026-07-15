@@ -25,7 +25,7 @@ def test_write_snapshot_creates_immutable_file(bundle, tmp_path: Path) -> None:
     assert path.exists()
     data = json.loads(path.read_text())
     assert data["row_count"] == len(live)
-    assert data["contract_version"] == "1.0.0"
+    assert data["contract_version"] == "1.1.0"
     assert data["snapshot_id"] == "20260701T000000Z"
 
 

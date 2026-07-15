@@ -9,6 +9,8 @@ from pipeline.adapters.excel_spark import ExcelSparkAdapter
 from pipeline.adapters.siam import SiamAdapter
 from pipeline.adapters.vahan import VahanAdapter
 
+# Phase 2 stubs (still NotImplementedError). ExcelSparkAdapter is implemented in Phase 1.
+STUB_ADAPTERS = [SiamAdapter, VahanAdapter]
 ALL_ADAPTERS = [ExcelSparkAdapter, SiamAdapter, VahanAdapter]
 
 
@@ -17,7 +19,7 @@ def test_abc_cannot_be_instantiated() -> None:
         SourceAdapter()  # type: ignore[abstract]
 
 
-@pytest.mark.parametrize("cls", ALL_ADAPTERS)
+@pytest.mark.parametrize("cls", STUB_ADAPTERS)
 def test_stub_methods_raise_not_implemented(cls: type[SourceAdapter]) -> None:
     a = cls()
     assert a.source_id in {"SIAM", "VAHAN", "BROKER", "MANUAL"}
@@ -31,7 +33,7 @@ def test_stub_methods_raise_not_implemented(cls: type[SourceAdapter]) -> None:
 
 
 def test_interface_holds_for_all_three_source_shapes() -> None:
-    # file-drop, scraper, API all satisfy the SAME interface — that's the Phase-0 proof.
+    # file-drop, scraper, API all satisfy the SAME interface — that's the pluggability proof.
     for cls in ALL_ADAPTERS:
         assert issubclass(cls, SourceAdapter)
 

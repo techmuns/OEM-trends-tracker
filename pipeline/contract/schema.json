@@ -2,15 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://oem-tracker/contract/schema.json",
   "title": "Bundle",
-  "description": "OEM Tracker frozen data contract. contract_version 1.0.0. One tidy row per observation (long format). The bundle is the artifact the UI reads. See docs/contract-coverage.md for the widget->field mapping and the non-negotiable rules.",
+  "description": "OEM Tracker data contract. contract_version 1.1.0 (Bundle.meta added; ContractRow frozen since 1.0.0). One tidy row per observation (long format). The bundle is the artifact the UI reads. See docs/contract-coverage.md for the widget->field mapping and the non-negotiable rules.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["contract_version", "generated_at", "source_universe_label", "rows"],
+  "required": ["contract_version", "generated_at", "source_universe_label", "meta", "rows"],
   "properties": {
     "contract_version": {
       "type": "string",
-      "const": "1.0.0",
-      "description": "Frozen contract version. Bump only on a breaking schema change."
+      "const": "1.1.0",
+      "description": "Contract version. 1.1.0 added the Bundle.meta wrapper object; ContractRow is unchanged from 1.0.0."
     },
     "generated_at": {
       "type": "string",
@@ -21,6 +21,10 @@
       "type": "string",
       "description": "Human label for share denominators. For SIAM: 'Share within reported SIAM universe'. Lives in the contract, never hardcoded in UI."
     },
+    "meta": {
+      "description": "Bundle-level provenance/freshness metadata (added in 1.1.0). Surfaces coverage and the latest available period so the UI can label freshness loudly.",
+      "$ref": "#/$defs/BundleMeta"
+    },
     "rows": {
       "type": "array",
       "description": "The tidy observation rows.",
@@ -28,6 +32,47 @@
     }
   },
   "$defs": {
+    "BundleMeta": {
+      "title": "BundleMeta",
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Bundle wrapper metadata. Does not touch the frozen ContractRow grain.",
+      "required": ["category", "source", "coverage_start", "latest_period", "snapshot_id", "row_count", "notes"],
+      "properties": {
+        "category": {
+          "type": ["string", "null"],
+          "description": "Category scope of this bundle, e.g. '2W'. Null if the bundle spans multiple categories."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["SIAM", "VAHAN", "BROKER", "MANUAL"],
+          "description": "The single source this bundle was built from (one source per bundle)."
+        },
+        "coverage_start": {
+          "type": "string",
+          "format": "date",
+          "description": "Earliest period_date present (first day of period)."
+        },
+        "latest_period": {
+          "type": "string",
+          "format": "date",
+          "description": "Latest period_date present (first day of period). The UI's freshness anchor."
+        },
+        "snapshot_id": {
+          "type": ["string", "null"],
+          "description": "The immutable snapshot this bundle was built from."
+        },
+        "row_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of rows in the bundle."
+        },
+        "notes": {
+          "type": ["string", "null"],
+          "description": "Freeform provenance note (e.g. 'Data ends Dec-2025; no live feed until Phase 2')."
+        }
+      }
+    },
     "ContractRow": {
       "title": "ContractRow",
       "type": "object",

@@ -7,7 +7,13 @@ bundle (`source_universe_label`) so they are never re-typed.
 
 from __future__ import annotations
 
-CONTRACT_VERSION = "1.0.0"
+CONTRACT_VERSION = "1.1.0"
+
+# Sentinel used as company_canonical for the source-reported industry-total rows
+# (e.g. "Total Domestic Two Wheelers"). These are the market-share DENOMINATOR and define
+# SIAM's actual reported universe. They are ingested as calc_status="reported" and must
+# never be reconstructed by summing companies (company rows start later than the total).
+INDUSTRY_TOTAL_CANONICAL = "Total Reported Universe"
 
 # --- Share labelling (rule §4: never label SIAM-based share as plain "market share") ---
 # Some pure-EV makers are not SIAM members, so EV share is understated. This exact string
@@ -46,6 +52,20 @@ MEASUREMENT_BASIS_BY_SOURCE: dict[str, str] = {
     "BROKER": "broker_estimate",
     "MANUAL": "manual_entry",
 }
+
+# --- Known data-reality exceptions in File 1 (encode, don't fail on them) ---
+# April 2020 is entirely blank in the workbook: the COVID-19 national lockdown halted
+# vehicle dispatches, so SIAM reported nothing. This is a legitimate gap INSIDE the
+# Apr-2012..Dec-2025 range, not a parser error — period_continuity treats it as expected.
+KNOWN_MISSING_MONTHS: dict[str, str] = {
+    "2020-04-01": "COVID-19 national lockdown — no dispatches reported by SIAM",
+}
+
+# SIAM occasionally posts small NEGATIVE monthly figures (returns/corrections exceeding
+# dispatches in a month, e.g. Mahindra Jul-2020, Piaggio Oct-2023). These are real
+# adjustments, not corruption — value_range_sanity flags them but does not quarantine.
+# A magnitude beyond this cap for a single monthly cell is treated as absurd -> fail.
+ABSURD_MONTHLY_MAGNITUDE = 5_000_000  # units/month for one maker+segment; ~50x the market
 
 # --- Coverage floors observed in the source workbook (encode, don't design around) ---
 # Industry totals begin Apr-2012, but company-level rows begin Apr-2014, so company-level

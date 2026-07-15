@@ -31,8 +31,16 @@ def test_committed_fixture_is_up_to_date() -> None:
 
 
 def test_fixture_parses_through_pydantic(bundle: Bundle) -> None:
-    assert bundle.contract_version == "1.0.0"
+    assert bundle.contract_version == "1.1.0"
     assert bundle.rows, "fixture must contain rows"
+
+
+def test_fixture_meta(bundle: Bundle) -> None:
+    assert bundle.meta.category == "2W"
+    assert bundle.meta.source.value == "SIAM"
+    assert bundle.meta.latest_period == max(r.period_date for r in bundle.rows)
+    assert bundle.meta.coverage_start == min(r.period_date for r in bundle.rows)
+    assert bundle.meta.row_count == len(bundle.rows)
 
 
 def test_zero_and_null_are_distinct(bundle: Bundle) -> None:

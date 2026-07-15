@@ -69,7 +69,7 @@ def test_enums_match_schema(schema: dict) -> None:
 
 
 def test_contract_version_const(schema: dict) -> None:
-    assert schema["properties"]["contract_version"]["const"] == "1.0.0"
+    assert schema["properties"]["contract_version"]["const"] == "1.1.0"
 
 
 @pytest.mark.skipif(

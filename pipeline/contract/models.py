@@ -10,6 +10,50 @@ from typing import Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, conint, constr
 
 
+class Source(StrEnum):
+    """
+    The single source this bundle was built from (one source per bundle).
+    """
+
+    SIAM = 'SIAM'
+    VAHAN = 'VAHAN'
+    BROKER = 'BROKER'
+    MANUAL = 'MANUAL'
+
+
+class BundleMeta(BaseModel):
+    """
+    Bundle wrapper metadata. Does not touch the frozen ContractRow grain.
+    """
+
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    category: str | None = Field(
+        ...,
+        description="Category scope of this bundle, e.g. '2W'. Null if the bundle spans multiple categories.",
+    )
+    source: Source = Field(
+        ...,
+        description='The single source this bundle was built from (one source per bundle).',
+    )
+    coverage_start: date = Field(
+        ..., description='Earliest period_date present (first day of period).'
+    )
+    latest_period: date = Field(
+        ...,
+        description="Latest period_date present (first day of period). The UI's freshness anchor.",
+    )
+    snapshot_id: str | None = Field(
+        ..., description='The immutable snapshot this bundle was built from.'
+    )
+    row_count: conint(ge=0) = Field(..., description='Number of rows in the bundle.')
+    notes: str | None = Field(
+        ...,
+        description="Freeform provenance note (e.g. 'Data ends Dec-2025; no live feed until Phase 2').",
+    )
+
+
 class PeriodType(StrEnum):
     month = 'month'
     quarter = 'quarter'
@@ -61,7 +105,7 @@ class Unit(StrEnum):
     units = 'units'
 
 
-class Source(StrEnum):
+class Source1(StrEnum):
     """
     On every row. Enforces the one-source-per-table rule and encodes measurement basis (SIAM=wholesale dispatches, VAHAN=registrations) via metrics.yaml.
     """
@@ -149,7 +193,7 @@ class ContractRow(BaseModel):
         description='The measurement. 0 and null are DISTINCT and must never be coerced into each other.',
     )
     unit: Unit
-    source: Source = Field(
+    source: Source1 = Field(
         ...,
         description='On every row. Enforces the one-source-per-table rule and encodes measurement basis (SIAM=wholesale dispatches, VAHAN=registrations) via metrics.yaml.',
     )
@@ -193,15 +237,15 @@ class ContractRow(BaseModel):
 
 class Bundle(BaseModel):
     """
-    OEM Tracker frozen data contract. contract_version 1.0.0. One tidy row per observation (long format). The bundle is the artifact the UI reads. See docs/contract-coverage.md for the widget->field mapping and the non-negotiable rules.
+    OEM Tracker data contract. contract_version 1.1.0 (Bundle.meta added; ContractRow frozen since 1.0.0). One tidy row per observation (long format). The bundle is the artifact the UI reads. See docs/contract-coverage.md for the widget->field mapping and the non-negotiable rules.
     """
 
     model_config = ConfigDict(
         extra='forbid',
     )
-    contract_version: Literal['1.0.0'] = Field(
+    contract_version: Literal['1.1.0'] = Field(
         ...,
-        description='Frozen contract version. Bump only on a breaking schema change.',
+        description='Contract version. 1.1.0 added the Bundle.meta wrapper object; ContractRow is unchanged from 1.0.0.',
     )
     generated_at: AwareDatetime = Field(
         ...,
@@ -210,5 +254,9 @@ class Bundle(BaseModel):
     source_universe_label: str = Field(
         ...,
         description="Human label for share denominators. For SIAM: 'Share within reported SIAM universe'. Lives in the contract, never hardcoded in UI.",
+    )
+    meta: BundleMeta = Field(
+        ...,
+        description='Bundle-level provenance/freshness metadata (added in 1.1.0). Surfaces coverage and the latest available period so the UI can label freshness loudly.',
     )
     rows: list[ContractRow] = Field(..., description='The tidy observation rows.')
