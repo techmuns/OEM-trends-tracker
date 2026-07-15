@@ -35,9 +35,15 @@ from pipeline.contract.constants import (
     SOURCE_UNIVERSE_LABELS,
 )
 from pipeline.contract.models import ContractRow
+from pipeline.dictionaries.loader import load_categories, load_company_resolver
 
-VIEW_PATH = Path("data/bundle/2w.json")
+BUNDLE_DIR = Path("data/bundle")
+MANIFEST_PATH = BUNDLE_DIR / "categories.json"
 MONTH, QUARTER, YEAR = "month", "quarter", "year"
+
+
+def view_path(category: str) -> Path:
+    return BUNDLE_DIR / f"{category.lower()}.json"
 
 
 # --- period key + label helpers --------------------------------------------------------
@@ -65,7 +71,10 @@ def quarter_label(fq: str) -> str:
     return f"{fq[:2]} {fq[2:]}"  # Q1FY27 -> "Q1 FY27"
 
 
-def build_view(rows: Sequence[ContractRow], meta_src: dict) -> dict:
+def build_view(rows: Sequence[ContractRow], meta_src: dict, category: str = "2W") -> dict:
+    rows = [r for r in rows if r.category.value == category]
+    if not rows:
+        raise ValueError(f"no rows for category {category}")
     current = [r for r in rows if not r.is_superseded and r.period_type.value == MONTH]
     # revised at maker grain: any superseded row for this (company, flow, powertrain, month)
     revised = {
@@ -184,16 +193,27 @@ def build_view(rows: Sequence[ContractRow], meta_src: dict) -> dict:
     latest = all_months[-1]
     ev_months = sorted({d for (c, f, p), m in mm.items() if p == "ev" for d in m})
     prod_months = sorted({d for (c, f, p), m in mm.items() if f == "production" for d in m})
+    cat_cfg = load_categories().get(category, {})
+    resolver = load_company_resolver()
+    has_ev = bool(ev_months)  # EV is only ever present where it is a derivable subset (2W)
+    ev_only_makers = sorted(c for c in makers if resolver.is_ev_only(c))
+    source = cat_cfg.get("source", meta_src.get("source", "SIAM"))
+    universe = SOURCE_UNIVERSE_LABELS.get(source, SIAM_UNIVERSE_LABEL)
     return {
         "meta": {
             "contract_version": CONTRACT_VERSION,
             "generated_at": meta_src["generated_at"],
-            "category": "2W",
-            "source": meta_src.get("source", "SIAM"),
-            "source_universe_label": SOURCE_UNIVERSE_LABELS.get("SIAM", SIAM_UNIVERSE_LABEL),
-            "share_caveat": SIAM_UNIVERSE_LABEL,
+            "category": category,
+            "category_label": cat_cfg.get("label", category),
+            "source": source,
+            "source_universe_label": universe,
+            "share_caveat": universe,
             "coverage_start": all_months[0].isoformat(),
             "latest_period": latest.isoformat(),
+            "native_frequency": cat_cfg.get("native_frequency", "month"),
+            "has_ev": has_ev,
+            "has_production": bool(prod_months),
+            "ev_only_makers": ev_only_makers,  # inline EV-only makers (never an EV total)
             "ev_latest_period": ev_months[-1].isoformat() if ev_months else None,
             "production_first_period": prod_months[0].isoformat() if prod_months else None,
             "company_history_floor": COMPANY_HISTORY_FLOOR,
@@ -222,8 +242,11 @@ def _period_axis(months: list[date], period_type: str) -> list[dict]:
     return [{"key": k, "label": k, "date": d.isoformat()} for k, d in items]
 
 
-def write_view(rows: Sequence[ContractRow], meta_src: dict, path: Path = VIEW_PATH) -> dict:
-    view = build_view(rows, meta_src)
+def write_view(
+    rows: Sequence[ContractRow], meta_src: dict, category: str = "2W", path: Path | None = None
+) -> dict:
+    view = build_view(rows, meta_src, category)
+    path = path or view_path(category)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(view, separators=(",", ":")), encoding="utf-8")
@@ -231,32 +254,50 @@ def write_view(rows: Sequence[ContractRow], meta_src: dict, path: Path = VIEW_PA
     return view
 
 
-def _default_meta_src() -> dict:
-    from pipeline.store.normalized import normalized_path
-
-    b = json.loads(Path("data/bundle/bundle.json").read_text())
-    return {
-        "generated_at": b["generated_at"],
-        "source": b["meta"]["source"],
-        "snapshot_id": b["meta"]["snapshot_id"],
-        "notes": b["meta"]["notes"],
-        "_normalized": str(normalized_path("2W")),
-    }
+def write_manifest(views: list[dict], path: Path = MANIFEST_PATH) -> dict:
+    """Manifest of available categories for the UI's category switch."""
+    cats = [
+        {
+            "key": v["meta"]["category"],
+            "label": v["meta"]["category_label"],
+            "latest_period": v["meta"]["latest_period"],
+            "coverage_start": v["meta"]["coverage_start"],
+            "native_frequency": v["meta"]["native_frequency"],
+            "has_ev": v["meta"]["has_ev"],
+            "has_production": v["meta"]["has_production"],
+            "source": v["meta"]["source"],
+        }
+        for v in views
+    ]
+    manifest = {"categories": cats}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(manifest, separators=(",", ":")), encoding="utf-8")
+    return manifest
 
 
 def main() -> int:
-    from pipeline.store.normalized import load_normalized
+    """Rebuild every category view present in data/normalized/ + the manifest."""
+    from pipeline.store.normalized import NORMALIZED_DIR, load_normalized
 
-    rows = load_normalized("2W")
-    if not rows:
-        print("[build_view] no normalized store; run the ingest first.")
-        return 1
-    view = write_view(rows, _default_meta_src())
-    print(
-        f"[build_view] wrote {VIEW_PATH} — {len(view['series'])} series, "
-        f"latest={view['meta']['latest_period']}, ev_latest={view['meta']['ev_latest_period']}"
-    )
-    return 0
+    meta_src = {
+        "generated_at": "2026-07-15T10:00:00+05:30",
+        "source": "SIAM",
+        "snapshot_id": None,
+        "notes": None,
+    }
+    views = []
+    for p in sorted(NORMALIZED_DIR.glob("*.json")):
+        category = p.stem.upper()
+        rows = load_normalized(category)
+        if not rows:
+            continue
+        v = write_view(rows, meta_src, category)
+        views.append(v)
+        print(f"[build_view] {category}: {len(v['series'])} series, latest={v['meta']['latest_period']}")
+    if views:
+        write_manifest(views)
+        print(f"[build_view] manifest: {[v['meta']['category'] for v in views]}")
+    return 0 if views else 1
 
 
 if __name__ == "__main__":

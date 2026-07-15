@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useBundle } from "./lib/useBundle";
+import { useBundle, useManifest } from "./lib/useBundle";
 import { useHostContext, useSnapshotMode } from "./lib/host";
-import type { Flow, Period, PeriodType, Point, Powertrain, ViewModel } from "./lib/types";
+import type { CategoryInfo, Flow, Period, PeriodType, Point, Powertrain, ViewModel } from "./lib/types";
 import { buildTable, getSeries, priorKey, seriesPoints, type TableRow } from "./lib/view";
 import { fmtPct, fmtPp, fmtShare, fmtUnits, fmtUnitsCompact, monthYear, shortName } from "./lib/format";
 import { ComparisonTable, type DisplayMode } from "./components/ComparisonTable";
@@ -36,28 +36,76 @@ const ICE = "#66635f";
 const CMP_COLORS = [GOLD, CREAM_60, CREAM_34];
 
 export function App() {
-  const load = useBundle();
-  if (load.status === "loading")
+  const manifest = useManifest();
+  if (manifest.status === "loading")
     return (
       <Shell>
         <Loading rows={6} />
       </Shell>
     );
-  if (load.status === "error")
+  if (manifest.status === "error")
     return (
       <Shell>
         <ErrorState onRetry={() => location.reload()} />
       </Shell>
     );
-  return <Dashboard view={load.data} />;
+  return <CategorizedApp categories={manifest.data.categories} />;
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+// Owns the selected category, fetches that category's view-model, and keeps the category
+// switch visible in the header even while a view is loading or errored.
+function CategorizedApp({ categories }: { categories: CategoryInfo[] }) {
+  const [cat, setCat] = useQuery("cat", categories[0]?.key ?? "2W");
+  const active = categories.find((c) => c.key === cat) ?? categories[0];
+  const load = useBundle(active?.key ?? "2W");
+  const picker = <CategorySelect categories={categories} value={active?.key ?? ""} onChange={setCat} />;
+  if (load.status === "loading")
+    return (
+      <Shell right={picker}>
+        <Loading rows={6} />
+      </Shell>
+    );
+  if (load.status === "error")
+    return (
+      <Shell right={picker}>
+        <ErrorState onRetry={() => location.reload()} />
+      </Shell>
+    );
+  return <Dashboard view={load.data} categories={categories} cat={active.key} setCat={setCat} />;
+}
+
+function CategorySelect({
+  categories,
+  value,
+  onChange,
+}: {
+  categories: CategoryInfo[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      title="Vehicle category"
+      aria-label="Vehicle category"
+      disabled={categories.length <= 1}
+    >
+      {categories.map((c) => (
+        <option key={c.key} value={c.key}>
+          {c.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function Shell({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <div className="shell">
       <header className="zone1">
         <span className="title">OEM Tracker</span>
-        <div className="header-right" />
+        <div className="header-right">{right}</div>
       </header>
       <main className="zone2">{children}</main>
     </div>
@@ -79,7 +127,17 @@ function useQuery<T extends string>(key: string, def: T): [T, (v: T) => void] {
 const METRIC_FOR_TAB: Record<Tab, string> = { sales: "sales", ev: "ev", prod: "exports" };
 const TAB_FOR_METRIC: Record<string, Tab> = { sales: "sales", ev: "ev", exports: "prod" };
 
-function Dashboard({ view }: { view: ViewModel }) {
+function Dashboard({
+  view,
+  categories,
+  cat,
+  setCat,
+}: {
+  view: ViewModel;
+  categories: CategoryInfo[];
+  cat: string;
+  setCat: (v: string) => void;
+}) {
   const host = useHostContext();
   const snapshot = useSnapshotMode();
   const [tab, setTab] = useQuery<Tab>("tab", "sales");
@@ -112,9 +170,7 @@ function Dashboard({ view }: { view: ViewModel }) {
               {host.oem ? ` · ${shortName(host.oem)}` : ""}
             </span>
           )}
-          <select value="2W" disabled title="Category (2W only in this release)">
-            <option>Two-Wheelers</option>
-          </select>
+          <CategorySelect categories={categories} value={cat} onChange={setCat} />
           <OemSelect view={view} value={oem} onChange={setOem} />
           <div className="seg" role="group" aria-label="Period granularity">
             {(["month", "quarter", "year"] as PeriodType[]).map((k) => (
@@ -470,7 +526,10 @@ function SalesTab({
               value={fmtShare(sel?.share)}
               cmp={selPrior?.share != null ? <span className="flat">vs {fmtShare(selPrior.share)} ({priorL})</span> : undefined}
               scope={shortName(oem)}
-              caveat={view.meta.share_caveat + " Some pure-EV makers (e.g. Ola) are not SIAM members, so EV share is understated."}
+              caveat={
+                view.meta.share_caveat +
+                (view.meta.has_ev ? " Some pure-EV makers (e.g. Ola) are not SIAM members, so EV share is understated." : "")
+              }
             />
             <Kpi
               label="Share Change (pp)"
@@ -496,12 +555,21 @@ function SalesTab({
               scope="share of top 3 OEMs"
               caveat="Combined share of the three largest OEMs within the reported universe."
             />
-            <Kpi
-              label="EV Penetration"
-              value={fmtShare(evPen)}
-              scope={evP ? `EV of 2W · ${evP.label}` : "—"}
-              caveat={view.meta.share_caveat + " Pure-EV makers outside SIAM are excluded, so this understates EV."}
-            />
+            {view.meta.has_ev ? (
+              <Kpi
+                label="EV Penetration"
+                value={fmtShare(evPen)}
+                scope={evP ? `EV of ${view.meta.category} · ${evP.label}` : "—"}
+                caveat={view.meta.share_caveat + " Pure-EV makers outside SIAM are excluded, so this understates EV."}
+              />
+            ) : (
+              <Kpi
+                label="Total Exports"
+                value={fmtUnitsCompact(pick(view, TOTAL, "export", "all", pt, key)?.v)}
+                scope={period.label}
+                caveat={`Wholesale ${view.meta.category} exports within the reported SIAM universe. EV is not broken out for this category — EV-only makers are counted inline.`}
+              />
+            )}
           </>
         )}
       </div>
@@ -602,6 +670,24 @@ function Insight({
 
 // --- EV vs ICE ---
 function EvTab({ view, pt, period, setPeriod }: { view: ViewModel; pt: PeriodType; period: Period; setPeriod: (v: string) => void }) {
+  // For PV/3W/CV the source has no EV block — EV-only makers sit inline among ICE makers,
+  // so EV volume is NOT derivable. Render it unavailable rather than a wrong number.
+  if (!view.meta.has_ev) {
+    const makers = view.meta.ev_only_makers;
+    return (
+      <Unavailable title={`EV split not available for ${view.meta.category_label.toLowerCase()}`}>
+        {view.meta.source} reports {view.meta.category_label.toLowerCase()} without an EV/ICE breakdown — EV-only makers are
+        listed inline alongside ICE makers, so an EV volume or share here would be a guess, not a measurement.
+        {makers.length > 0 && (
+          <>
+            {" "}
+            EV-only makers present in the data (counted within total sales, never summed into a separate EV figure):{" "}
+            <b>{makers.join(", ")}</b>.
+          </>
+        )}
+      </Unavailable>
+    );
+  }
   const axis = view.periods[pt];
   const TOTAL = view.meta.industry_total_label;
   const evLatest = view.meta.ev_latest_period;
@@ -714,6 +800,7 @@ function ProdTab({
 }) {
   const axis = view.periods[pt];
   const TOTAL = view.meta.industry_total_label;
+  const catShort = view.meta.category; // "2W" | "PV" | ...
   const key = period.key;
   const priorL = labelFor(axis, priorKey(pt, key));
   const expInd = pick(view, TOTAL, "export", "all", pt, key);
@@ -721,9 +808,13 @@ function ProdTab({
 
   const exp = buildTable(view, { flow: "export", powertrain: "all", periodType: pt, periodKey: key, totalLabel: TOTAL });
 
+  // Production exists only where the source reports it (2W: File 2, 2026-01+). Categories
+  // with no production flow render it unavailable.
   const prodFirst = view.meta.production_first_period;
   const prodAxis = axis.filter((p) => !prodFirst || p.date >= prodFirst);
-  const prodPeriod = prodAxis.find((p) => p.key === key) ?? prodAxis[prodAxis.length - 1];
+  const prodPeriod = view.meta.has_production
+    ? prodAxis.find((p) => p.key === key) ?? prodAxis[prodAxis.length - 1]
+    : undefined;
   const prod = prodPeriod
     ? buildTable(view, { flow: "production", powertrain: "all", periodType: pt, periodKey: prodPeriod.key, totalLabel: TOTAL })
     : { rows: [], total: null };
@@ -739,10 +830,14 @@ function ProdTab({
         />
         <Kpi label="Export YoY" value={expInd?.yoy == null ? "—" : fmtPct(expInd.yoy)} scope={`vs ${priorL}`} />
         <Kpi
-          label="Production (2W)"
+          label={`Production (${catShort})`}
           value={prodPeriod ? fmtUnitsCompact(pick(view, TOTAL, "production", "all", pt, prodPeriod.key)?.v) : "—"}
           scope={prodPeriod ? prodPeriod.label : "unavailable"}
-          caveat="2W production is reported only from Jan-2026 (monthly SIAM). Earlier periods are not available."
+          caveat={
+            view.meta.has_production
+              ? `${catShort} production is reported only from ${prodFirst ? monthYear(prodFirst) : "recently"} (monthly SIAM). Earlier periods are not available.`
+              : `Production is not reported for ${view.meta.category_label.toLowerCase()} in this source. Exports remain available.`
+          }
         />
         <Kpi
           label="Export Share Leader"
@@ -768,14 +863,14 @@ function ProdTab({
             <Empty />
           )}
         </WidgetCard>
-        <WidgetCard title="Production (2W)" subtitle="Maker-level · monthly SIAM">
+        <WidgetCard title={`Production (${catShort})`} subtitle="Maker-level · monthly SIAM">
           {prodPeriod && prod.rows.length ? (
             <>
               <div className="unavail" style={{ marginBottom: 12 }}>
                 <strong>Limited coverage</strong>
                 <span>
-                  2W production is reported only from {monthYear(prodFirst!)}. Earlier periods are not in the source and are
-                  not shown as zero.
+                  {catShort} production is reported only from {monthYear(prodFirst!)}. Earlier periods are not in the source
+                  and are not shown as zero.
                 </span>
               </div>
               <ComparisonTable
@@ -788,9 +883,9 @@ function ProdTab({
               />
             </>
           ) : (
-            <Unavailable title="Production data is not available for Two-Wheelers">
-              The current source workbook does not report 2W production for this period. Export analysis remains available.
-              Production will appear only after a validated source is connected.
+            <Unavailable title={`Production data is not available for ${view.meta.category_label}`}>
+              The current source workbook does not report {view.meta.category_label.toLowerCase()} production for this
+              period. Export analysis remains available. Production will appear only after a validated source is connected.
             </Unavailable>
           )}
         </WidgetCard>

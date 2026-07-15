@@ -31,8 +31,14 @@ def _norm(s: str) -> str:
 
 
 class CompanyResolver:
-    def __init__(self, alias_to_canonical: dict[str, str]) -> None:
+    def __init__(self, alias_to_canonical: dict[str, str], ev_only: set[str] | None = None) -> None:
         self._map = alias_to_canonical
+        self._ev_only = ev_only or set()
+
+    def is_ev_only(self, canonical: str) -> bool:
+        """Company attribute (never a row dimension). EV-only makers are still ingested as
+        powertrain='all' and must NEVER be summed into an 'EV total' for PV/3W/CV."""
+        return canonical in self._ev_only
 
     def resolve(self, raw: str) -> str:
         key = _norm(raw)
@@ -71,9 +77,12 @@ def load_company_resolver(path: Path | None = None) -> CompanyResolver:
     p = path or (DICT_DIR / "companies.yaml")
     data = yaml.safe_load(p.read_text(encoding="utf-8"))
     mapping: dict[str, str] = {}
+    ev_only: set[str] = set()
     for entry in data["companies"]:
         canonical = entry["canonical"]
         mapping[_norm(canonical)] = canonical  # canonical resolves to itself
+        if entry.get("is_ev_only"):
+            ev_only.add(canonical)
         for alias in entry.get("aliases", []):
             norm = _norm(alias)
             if norm in mapping and mapping[norm] != canonical:
@@ -81,7 +90,14 @@ def load_company_resolver(path: Path | None = None) -> CompanyResolver:
                     f"alias {alias!r} maps to both {mapping[norm]!r} and {canonical!r}"
                 )
             mapping[norm] = canonical
-    return CompanyResolver(mapping)
+    return CompanyResolver(mapping, ev_only)
+
+
+@lru_cache(maxsize=1)
+def load_categories(path: Path | None = None) -> dict:
+    """Per-category block config (segment taxonomy + terminators) from categories.yaml."""
+    p = path or (DICT_DIR / "categories.yaml")
+    return yaml.safe_load(p.read_text(encoding="utf-8"))["categories"]
 
 
 @lru_cache(maxsize=1)

@@ -28,13 +28,17 @@ def write_snapshot(
     rows: Sequence[ContractRow],
     ts: datetime,
     snapshots_dir: Path = SNAPSHOTS_DIR,
+    category: str | None = None,
 ) -> Path:
     """Write an immutable snapshot and return its path.
 
     Refuses to overwrite an existing snapshot id — snapshots are immutable by contract.
+    A category (2W/PV/…) is included in the filename so multiple categories can snapshot at
+    the same timestamp without colliding.
     """
     snapshots_dir.mkdir(parents=True, exist_ok=True)
-    path = snapshots_dir / f"snapshot-{snapshot_id(ts)}.json"
+    tag = f"{category.lower()}-" if category else ""
+    path = snapshots_dir / f"snapshot-{tag}{snapshot_id(ts)}.json"
     if path.exists():
         raise FileExistsError(
             f"snapshot {path} already exists; snapshots are immutable and never overwritten."

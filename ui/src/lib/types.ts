@@ -36,11 +36,16 @@ export interface Meta {
   contract_version: string;
   generated_at: string;
   category: string;
+  category_label: string;
   source: string;
   source_universe_label: string;
   share_caveat: string;
   coverage_start: string;
   latest_period: string;
+  native_frequency: PeriodType;
+  has_ev: boolean;
+  has_production: boolean;
+  ev_only_makers: string[]; // EV-only makers reported inline (never summed into an EV total)
   ev_latest_period: string | null;
   production_first_period: string | null;
   company_history_floor: string;
@@ -48,6 +53,22 @@ export interface Meta {
   snapshot_id: string | null;
   notes: string | null;
   industry_total_label: string;
+}
+
+// data/bundle/categories.json — the categories the UI can switch between.
+export interface CategoryInfo {
+  key: string;
+  label: string;
+  latest_period: string;
+  coverage_start: string;
+  native_frequency: PeriodType;
+  has_ev: boolean;
+  has_production: boolean;
+  source: string;
+}
+
+export interface Manifest {
+  categories: CategoryInfo[];
 }
 
 export interface ViewModel {
