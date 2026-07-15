@@ -1,114 +1,79 @@
 /* OEM Tracker — Munshot embedded dashboard.
-   Restrained analytical blue system with full Light + Dark modes, driven entirely by
-   theme tokens (data-theme on <html>). Green/red only for analytical direction; blue for
-   chrome/accents. Flat cards, 4px radius, 1px hairline borders, no shadows or gradients. */
+   Premium OEM-intelligence cockpit: cool near-black surfaces with navy undertones,
+   restrained copper/bronze accents (~10% of the surface), thin blue-grey borders instead
+   of shadows. Green/red only for data movement; copper only for active/selected/emphasis.
+   Single dark theme, driven entirely by tokens. Flat cards, 4px radius, compact spacing. */
 :root {
+  color-scheme: dark;
+
+  /* surfaces — cool near-black with navy undertones */
+  --canvas: #06090f;
+  --surface-1: #0a1018; /* primary card / table surface */
+  --surface-2: #0d1520; /* secondary surface / table header */
+  --surface-hover: #101a27; /* elevated / hover surface */
+  --row-alt: #0d131c; /* alternating table row B */
+
+  /* text */
+  --text-primary: #f4f6f8;
+  --text-secondary: #c2cad5;
+  --text-muted: #8491a3;
+  --text-disabled: #647184; /* hint */
+
+  /* copper / bronze accents — active + emphasis only */
+  --accent: #c68a52; /* soft copper — active text/icons */
+  --accent-strong: #b87333; /* primary copper — key fills/lines */
+  --bronze: #8c5a2b; /* deep bronze */
+  --accent-soft: rgba(184, 115, 51, 0.14); /* copper tint */
+  --accent-border: rgba(198, 138, 82, 0.5); /* copper border */
+
+  /* blue tones — subtle undertone, depth, hover */
+  --steel-blue: #1b2a41;
+  --oem-blue: #2d4f7c;
+  --soft-blue: #6e90c9;
+  --blue-tint: rgba(110, 144, 201, 0.1); /* pale blue overlay */
+  --row-hover: rgba(110, 144, 201, 0.08); /* table row hover */
+  --selected-blue: rgba(45, 79, 124, 0.18);
+
+  /* borders — thin blue-grey */
+  --border: rgba(120, 155, 210, 0.14);
+  --border-subtle: rgba(120, 155, 210, 0.09);
+  --border-strong: rgba(120, 155, 210, 0.24);
+
+  /* semantic — data movement only */
+  --positive: #4fb783;
+  --positive-soft: rgba(79, 183, 131, 0.12);
+  --negative: #e06b62;
+  --negative-soft: rgba(224, 107, 98, 0.12);
+  --neutral-data: #8491a3;
+
+  --ev: #6e90c9; /* EV = soft OEM blue */
+  --ice: #55657e; /* ICE = muted blue-grey */
+
+  /* coverage/partial warnings — muted gold, distinct from copper */
+  --amber: #cda657;
+  --amber-soft: rgba(205, 166, 87, 0.11);
+  --amber-border: rgba(205, 166, 87, 0.32);
+
+  --header-bg: rgba(6, 9, 15, 0.92);
+  --tooltip-bg: #0c1622;
+
+  /* chart lines: copper focus, blue comparison lines */
+  --chart-1: #d0e3ff; /* primary comparison line — pale blue */
+  --chart-2: #7096d1; /* secondary comparison line — muted blue */
+  --chart-3: #97aac8; /* additional — restrained blue-grey */
+  --chart-focus: #c68a52; /* focused / selected line — copper */
+  --chart-grid: rgba(120, 155, 210, 0.1);
+  --chart-axis: #8491a3;
+  --chart-crosshair: rgba(120, 155, 210, 0.28);
+
+  --scrollbar-thumb: rgba(120, 155, 210, 0.22);
+  --scrollbar-track: transparent;
+
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%23C68A52' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+
   --radius: 4px;
   --pill: 999px;
   font-synthesis: none;
-}
-
-/* ---------------- Light mode (default) ---------------- */
-:root,
-:root[data-theme="light"] {
-  color-scheme: light;
-
-  --canvas: #f9fcff;
-  --surface-1: #ffffff;
-  --surface-2: #f3f7ff; /* subtle alt rows / skeletons */
-  --surface-hover: #eaf2ff;
-
-  --text-primary: #081f5c;
-  --text-secondary: #334eac;
-  --text-muted: #6b7ba1; /* desaturated blue-grey */
-  --text-disabled: #a7b4d0;
-
-  --accent: #334eac;
-  --accent-soft: #e7f1ff; /* soft active / selected background */
-  --accent-border: rgba(51, 78, 172, 0.45);
-
-  --border: #d0e3ff;
-  --border-subtle: #e7f1ff;
-
-  --positive: #1c8a4e;
-  --positive-soft: rgba(28, 138, 78, 0.1);
-  --negative: #c53b38;
-  --negative-soft: rgba(197, 59, 56, 0.1);
-  --neutral-data: #7b88a8;
-
-  --ev: #334eac; /* EV = brighter blue accent */
-  --ice: #94a3b8; /* ICE = muted blue-grey */
-
-  --amber: #b7791f;
-  --amber-soft: rgba(183, 121, 31, 0.1);
-  --amber-border: rgba(183, 121, 31, 0.34);
-
-  --header-bg: rgba(249, 252, 255, 0.9);
-  --tooltip-bg: #ffffff;
-
-  --chart-1: #334eac; /* primary chart line */
-  --chart-2: #7096d1; /* secondary chart line */
-  --chart-3: #64748b; /* tertiary — muted slate, kept distinct */
-  --chart-focus: #334eac; /* hovered/locked line */
-  --chart-grid: rgba(8, 31, 92, 0.08);
-  --chart-axis: #6b7ba1;
-  --chart-crosshair: rgba(8, 31, 92, 0.3);
-
-  --scrollbar-thumb: #cfe0f7;
-  --scrollbar-track: transparent;
-
-  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%23334EAC' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-}
-
-/* ---------------- Dark mode ---------------- */
-:root[data-theme="dark"] {
-  color-scheme: dark;
-
-  --canvas: #081f5c;
-  --surface-1: #0e2a6b; /* card — slightly lighter navy */
-  --surface-2: #143177; /* table header / alt rows */
-  --surface-hover: #183a86;
-
-  --text-primary: #f9fcff;
-  --text-secondary: #d0e3ff;
-  --text-muted: #93a6ce; /* softened blue-grey from #7096D1 */
-  --text-disabled: #6d80ab;
-
-  --accent: #7096d1;
-  --accent-soft: rgba(112, 150, 209, 0.16);
-  --accent-border: rgba(112, 150, 209, 0.55);
-
-  --border: rgba(208, 227, 255, 0.16);
-  --border-subtle: rgba(208, 227, 255, 0.09);
-
-  --positive: #52c283;
-  --positive-soft: rgba(82, 194, 131, 0.14);
-  --negative: #e77b72;
-  --negative-soft: rgba(231, 123, 114, 0.14);
-  --neutral-data: #93a6ce;
-
-  --ev: #8fb3e8;
-  --ice: #5e77a6;
-
-  --amber: #e0b15a;
-  --amber-soft: rgba(224, 177, 90, 0.13);
-  --amber-border: rgba(224, 177, 90, 0.38);
-
-  --header-bg: rgba(8, 31, 92, 0.92);
-  --tooltip-bg: #143177;
-
-  --chart-1: #d0e3ff;
-  --chart-2: #7096d1;
-  --chart-3: #9aa9c9;
-  --chart-focus: #d0e3ff;
-  --chart-grid: rgba(208, 227, 255, 0.11);
-  --chart-axis: #93a6ce;
-  --chart-crosshair: rgba(208, 227, 255, 0.3);
-
-  --scrollbar-thumb: rgba(208, 227, 255, 0.22);
-  --scrollbar-track: transparent;
-
-  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%237096D1' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
 * {
@@ -233,9 +198,11 @@ select {
   background-repeat: no-repeat;
   background-position: right 9px center;
 }
+/* secondary controls: soft blue hover (copper is reserved for active/emphasis) */
 select:hover,
 .btn:hover {
-  border-color: var(--accent-border);
+  border-color: var(--border-strong);
+  background: var(--blue-tint);
   color: var(--text-primary);
 }
 select:disabled {
@@ -243,8 +210,14 @@ select:disabled {
   cursor: default;
   opacity: 0.7;
 }
+/* primary action: dark fill, copper border/text, subtle copper hover tint */
 .btn.accent {
   border-color: var(--accent-border);
+  color: var(--accent);
+}
+.btn.accent:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
   color: var(--accent);
 }
 .btn.icon {
@@ -361,7 +334,8 @@ select:disabled {
 }
 .chip:hover {
   color: var(--text-secondary);
-  border-color: var(--border);
+  border-color: var(--border-strong);
+  background: var(--blue-tint);
 }
 .chip.active {
   color: var(--accent);
@@ -450,6 +424,15 @@ select:disabled {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+/* card hover: slightly stronger border + faint blue tint (depth from contrast, not shadow) */
+.card:hover {
+  border-color: var(--border-strong);
+}
+.kpi:hover,
+.insight-card:hover {
+  background: linear-gradient(var(--blue-tint), var(--blue-tint)), var(--surface-1);
 }
 .card-h {
   display: flex;
@@ -605,7 +588,7 @@ thead th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--surface-1);
+  background: var(--surface-2);
   color: var(--text-secondary);
   font-weight: 500;
   font-size: 11px;
@@ -627,6 +610,7 @@ tbody td.oem {
 }
 thead th.oem {
   z-index: 3;
+  background: var(--surface-2);
 }
 tbody td {
   padding: 0 14px;
@@ -636,19 +620,22 @@ tbody td {
   white-space: nowrap;
   border-bottom: 1px solid var(--border-subtle);
 }
-tbody tr:nth-child(even) td {
-  background: var(--surface-2);
-}
+/* alternating rows: A = surface-1, B = row-alt (subtle, thin blue-grey dividers) */
+tbody tr:nth-child(even) td,
 tbody tr:nth-child(even) td.oem {
-  background: var(--surface-2);
+  background: var(--row-alt);
 }
 tbody tr:hover td,
 tbody tr:hover td.oem {
   background: var(--surface-hover);
 }
+/* selected OEM row: subtle copper-tinted background + 2px copper left border (never a full fill) */
 tbody tr.sel td,
 tbody tr.sel td.oem {
   background: var(--accent-soft);
+}
+tbody tr.sel td.oem {
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 tbody td.oem {
   font-weight: 500;
@@ -749,7 +736,7 @@ tr.total td.oem {
   cursor: pointer;
 }
 .insight-card:hover {
-  border-color: var(--accent-border);
+  border-color: var(--border-strong);
 }
 
 /* --- source / provenance (design.md §8.4) --- */

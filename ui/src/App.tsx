@@ -18,8 +18,6 @@ import {
   IconExternal,
   IconFactory,
   IconGrowth,
-  IconMoon,
-  IconSun,
   IconTrendDown,
   IconTrendUp,
   Loading,
@@ -27,7 +25,6 @@ import {
   Unavailable,
   WidgetCard,
 } from "./components/ui";
-import { useTheme } from "./lib/theme";
 
 type Tab = "sales" | "ev" | "prod";
 
@@ -130,23 +127,6 @@ function useQuery<T extends string>(key: string, def: T): [T, (v: T) => void] {
 const METRIC_FOR_TAB: Record<Tab, string> = { sales: "sales", ev: "ev", prod: "exports" };
 const TAB_FOR_METRIC: Record<string, Tab> = { sales: "sales", ev: "ev", exports: "prod" };
 
-// Compact Light/Dark switch (sun/moon). Persists + applies immediately via useTheme.
-function ThemeToggle() {
-  const [theme, toggle] = useTheme();
-  const next = theme === "dark" ? "light" : "dark";
-  return (
-    <button
-      className="btn icon"
-      onClick={toggle}
-      title={`Switch to ${next} mode`}
-      aria-label={`Switch to ${next} mode`}
-      aria-pressed={theme === "dark"}
-    >
-      {theme === "dark" ? <IconSun /> : <IconMoon />}
-    </button>
-  );
-}
-
 function Dashboard({
   view,
   categories,
@@ -226,7 +206,6 @@ function Dashboard({
           >
             ↻
           </button>
-          <ThemeToggle />
           <button className="btn export accent" onClick={() => window.print()} title="Export current view (print / PDF)">
             ↧ Export
           </button>
