@@ -8,7 +8,7 @@ interface (the frozen contract).
 | **0 — Foundation** | Repo, frozen contract, dictionaries, adapter interface, validation framework, aggregation calendar, snapshot/revision store, fixtures, CI/CD, docs | done |
 | **1 — Backfill** | File 1 → tidy store (2W), real gate logic, aggregation, first real snapshot + bundle (`latest_period` Dec-2025) | **done — see [phase1-report.md](phase1-report.md)** |
 | **2 — Live ingest** | File 2 adapter, seam validation, watched-folder + cron, revisions; series extended to May-2026 (maker-level) | **done — see [phase2-report.md](phase2-report.md)** |
-| 3 — Dashboard UI | Munshot embedded dashboard reading the frozen bundle | next |
+| **3 — Dashboard UI** | React/TS Munshot dashboard on a precomputed view-model; M/Q/Y × Abs/YoY, EV vs ICE, Production & Exports, all states | **done — see [phase3-report.md](phase3-report.md)** |
 
 ## Phase 0 — what's built (and what is deliberately NOT)
 

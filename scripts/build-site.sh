@@ -1,27 +1,33 @@
 #!/usr/bin/env bash
-# Assemble the deployable static site into ./dist (Cloudflare Pages output dir).
+# Build the deployable static site into ./dist (Cloudflare Pages output dir).
 #
-# Phase 0: copy the UI placeholder and expose the SAMPLE bundle so the deploy pipeline is
-# exercised end-to-end. Phase 1 writes the real bundle to data/bundle/bundle.json and this
-# script will copy THAT (falling back to the fixture only when no real bundle exists yet).
-# Phase 3 replaces ui/ with the built dashboard and this script runs its build.
+# The pipeline commits the UI view-model at data/bundle/2w.json (precomputed derived
+# fields — the UI does no math). This script copies it into the UI, builds the React app,
+# and publishes the built app as the site root (with /data/2w.json alongside).
+#
+# Deploy only needs Node + pnpm (the data is already committed); no Python at deploy time.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-OUT=dist
-rm -rf "$OUT"
-mkdir -p "$OUT/data"
-
-# UI (Phase 0: static placeholder; Phase 3: built dashboard output)
-cp ui/index.html "$OUT/index.html"
-
-# Data: prefer the real committed bundle; fall back to the synthetic fixture in Phase 0.
-if [ -f data/bundle/bundle.json ]; then
-  cp data/bundle/bundle.json "$OUT/data/bundle.json"
-  echo "[build-site] copied real bundle -> $OUT/data/bundle.json"
-else
-  cp fixtures/sample_bundle.json "$OUT/data/sample_bundle.json"
-  echo "[build-site] no real bundle yet — exposed sample fixture -> $OUT/data/sample_bundle.json"
+VIEW=data/bundle/2w.json
+if [ ! -f "$VIEW" ]; then
+  echo "[build-site] $VIEW not found — run the pipeline (backfill/ingest) first." >&2
+  exit 1
 fi
 
-echo "[build-site] wrote $OUT/"
+# 1. Hand the committed view-model to the UI as a static asset.
+mkdir -p ui/public/data
+cp "$VIEW" ui/public/data/2w.json
+
+# 2. Build the React UI.
+cd ui
+if [ -z "${SKIP_UI_INSTALL:-}" ]; then
+  pnpm install --frozen-lockfile
+fi
+pnpm build   # -> ui/dist (includes /data/2w.json from public/)
+cd ..
+
+# 3. Publish the built UI as the site root.
+rm -rf dist
+cp -r ui/dist dist
+echo "[build-site] wrote dist/ (UI + /data/2w.json)"

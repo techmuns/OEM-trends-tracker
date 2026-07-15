@@ -26,7 +26,7 @@ pipeline/
   ingest.py     monthly-cron entrypoint (Phase 0: no-op, exits 0)
 data/           raw / snapshots / normalized / bundle  (committed = audit trail)
 fixtures/       sample_bundle.json — synthetic, schema-valid, all edge cases
-ui/             Phase 0 deploy placeholder (Phase 3 replaces this)
+ui/             React + Vite dashboard (reads the precomputed view-model data/bundle/2w.json)
 docs/           prd · phases · design · contract-coverage
 scripts/        gen-contract.sh · gen_fixture.py · build-site.sh
 ```
@@ -87,7 +87,8 @@ The repo lives at `techmuns/oem-trends-tracker`. Ensure `main` is pushed.
 2. Select this GitHub repository and the **`main`** branch (production branch).
 3. Set the **build configuration** (these match [`wrangler.toml`](wrangler.toml)):
    - **Framework preset:** `None`
-   - **Build command:** `bash scripts/build-site.sh`
+   - **Build command:** `bash scripts/build-site.sh` (builds the React app in `ui/` and
+     serves the committed view-model at `/data/2w.json`; pnpm is auto-detected)
    - **Build output directory:** `dist`
    - **Root directory:** `/`
 4. Save and deploy. Every push to `main` now auto-deploys.

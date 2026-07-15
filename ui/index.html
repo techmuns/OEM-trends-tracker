@@ -1,61 +1,12 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OEM Tracker — Foundation</title>
-    <style>
-      :root {
-        --canvas: #080a0b;
-        --surface-1: #0e1113;
-        --text-primary: #fff7dd;
-        --text-secondary: rgba(255, 247, 221, 0.72);
-        --text-muted: rgba(255, 247, 221, 0.46);
-        --accent: #c8ad86;
-        --border: rgba(255, 247, 221, 0.14);
-      }
-      * { box-sizing: border-box; }
-      html, body { margin: 0; height: 100%; }
-      body {
-        background: var(--canvas);
-        color: var(--text-primary);
-        font-family: Inter, system-ui, -apple-system, sans-serif;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-      }
-      main {
-        max-width: 560px;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        background: var(--surface-1);
-        padding: 28px 30px;
-      }
-      h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 4px; }
-      .accent { color: var(--accent); }
-      p { color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
-      .muted { color: var(--text-muted); font-size: 11px; margin-top: 18px; }
-      ul { color: var(--text-secondary); font-size: 13px; line-height: 1.7; padding-left: 18px; }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OEM Tracker</title>
   </head>
   <body>
-    <main>
-      <h1>OEM Tracker <span class="accent">— Phase 0 foundation</span></h1>
-      <p>
-        This is the deploy placeholder. The foundation (frozen data contract, source-adapter
-        interface, validation gates, aggregation calendar, snapshot/revision store, and
-        fixtures) is in place. The dashboard UI is built in Phase 3 against the frozen
-        bundle.
-      </p>
-      <ul>
-        <li>Contract: <code>pipeline/contract/schema.json</code> (v1.0.0)</li>
-        <li>Sample bundle: <code>/data/sample_bundle.json</code></li>
-      </ul>
-      <p class="muted">
-        Data shown by the future dashboard is licence-restricted (SIAM/broker). This site
-        must sit behind Cloudflare Access — see the repository README.
-      </p>
-    </main>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

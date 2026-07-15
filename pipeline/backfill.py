@@ -18,6 +18,7 @@ from pathlib import Path
 
 from pipeline.adapters.excel_spark import ExcelSparkAdapter
 from pipeline.build_bundle import build_bundle
+from pipeline.build_view import write_view
 from pipeline.store.normalized import load_normalized, save_normalized
 from pipeline.store.revisions import apply_revisions, current_rows
 from pipeline.store.snapshot import snapshot_id, write_snapshot
@@ -83,6 +84,15 @@ def run_backfill(source_file: Path = DEFAULT_FILE, ts: datetime = INGEST_TS) -> 
             f"Data ends {latest.isoformat()}; no live feed until Phase 2. "
             "Source: SIAM wholesale dispatches (manually maintained summary workbook)."
         ),
+    )
+    write_view(
+        store_rows,
+        {
+            "generated_at": ts.isoformat(),
+            "source": SOURCE,
+            "snapshot_id": sid,
+            "notes": f"Data ends {latest.isoformat()}. Source: SIAM wholesale dispatches.",
+        },
     )
     _print_stats(live, outcome, report, adapter)
     print(f"[backfill] accepted. snapshot={snap.name} latest_period={latest}")

@@ -25,6 +25,7 @@ from pipeline.adapters.base import SourceAdapter
 from pipeline.adapters.excel_spark import ExcelSparkAdapter
 from pipeline.adapters.siam_monthly import SiamMonthlyAdapter
 from pipeline.build_bundle import build_bundle
+from pipeline.build_view import write_view
 from pipeline.contract.constants import FILE1_LAST_PERIOD
 from pipeline.store.normalized import load_normalized, save_normalized
 from pipeline.store.revisions import apply_revisions, current_rows
@@ -123,6 +124,16 @@ def process_file(path: Path, ts: datetime = INGEST_TS) -> int:
         category=CATEGORY,
         snapshot_id=snapshot_id(ts),
         notes=_bundle_notes(live),
+    )
+    # rebuild the UI view-model (precomputed yoy/share/share_change + M/Q/Y) the UI reads
+    write_view(
+        store_rows,
+        {
+            "generated_at": ts.isoformat(),
+            "source": SOURCE,
+            "snapshot_id": snapshot_id(ts),
+            "notes": _bundle_notes(live),
+        },
     )
     if outcome.revised_keys:
         print(f"[ingest] {len(outcome.revised_keys)} revisions applied (superseded, not deleted).")

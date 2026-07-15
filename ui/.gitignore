@@ -1,0 +1,5 @@
+node_modules/
+dist/
+# generated at build time by scripts/build-site.sh (copy of data/bundle/2w.json)
+public/data/
+*.tsbuildinfo
