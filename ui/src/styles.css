@@ -143,9 +143,10 @@ body {
 }
 .zone2 {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 20px 28px 28px;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  padding: 0;
 }
 
 /* --- header --- */
@@ -1041,7 +1042,7 @@ tr.total td.oem {
     flex-wrap: wrap;
     gap: 8px 10px;
   }
-  .zone2 {
+  .analysis-inner {
     padding: 16px 14px 22px;
   }
   .tabs {
@@ -1066,4 +1067,772 @@ tr.total td.oem {
 .snapshot .card:hover,
 .snapshot .insight-card:hover {
   border-color: var(--border);
+}
+
+/* =====================================================================
+   COMPARE WORKSPACE — dockable drag-and-drop comparison surface.
+   Same tokens as the dashboard: blue-black canvas, restrained copper for
+   focus/active/drop states, thin blue-grey borders, 120-160ms transitions.
+   ===================================================================== */
+
+/* --- split layout (analysis | compare) --- */
+.cmp-split {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+.cmp-pane {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.cmp-pane-analysis {
+  flex: 1 1 auto;
+  min-width: 0;
+  container-type: inline-size;
+}
+.analysis-inner {
+  padding: 20px 28px 28px;
+}
+.cmp-split.open:not(.expanded) .cmp-pane-analysis {
+  flex: 0 0 calc(var(--cmp-ratio, 0.6) * 100%);
+  max-width: calc(var(--cmp-ratio, 0.6) * 100%);
+}
+.cmp-split.open:not(.expanded) .cmp-pane-compare {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.cmp-split.expanded .cmp-pane-analysis {
+  display: none;
+}
+.cmp-split.expanded .cmp-pane-compare {
+  flex: 1 1 100%;
+}
+.cmp-pane-compare {
+  background: var(--canvas);
+  border-left: 1px solid var(--border);
+  container-type: inline-size;
+}
+
+/* --- draggable divider --- */
+.cmp-divider {
+  flex: 0 0 10px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  background: transparent;
+  touch-action: none;
+}
+.cmp-divider-grip {
+  width: 2px;
+  height: 46px;
+  border-radius: 2px;
+  background: var(--border-strong);
+  transition: background 140ms ease, height 140ms ease;
+}
+.cmp-divider:hover .cmp-divider-grip {
+  background: var(--accent);
+  height: 64px;
+}
+body.cmp-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+body.cmp-resizing .cmp-divider-grip {
+  background: var(--accent);
+}
+
+/* --- compare dock tab (in the shared header) --- */
+.cmp-dock {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+.cmp-dock:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+.cmp-dock.open {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.cmp-dock-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: var(--pill);
+  background: var(--accent-strong);
+  color: var(--canvas);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+/* drop-target state during any compare drag: soft blue + dashed copper, then solid on hover */
+.cmp-dock.dragging {
+  border-style: dashed;
+  border-color: var(--accent-border);
+  color: var(--accent);
+  background: var(--blue-tint);
+}
+.cmp-dock.dragging.over {
+  border-style: solid;
+  background: var(--accent-soft);
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* --- docked workspace --- */
+.cmp-ws {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.cmp-ws-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.cmp-ws-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.cmp-ws-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.cmp-ws-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.cmp-ws-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.btn.sm {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 11.5px;
+}
+.btn.sm.icon {
+  width: 26px;
+  padding: 0;
+  font-size: 15px;
+}
+.cmp-ws-body {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 18px;
+}
+
+.cmp-notice {
+  font-size: 11.5px;
+  padding: 7px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.cmp-notice.info {
+  background: var(--blue-tint);
+  color: var(--text-secondary);
+}
+.cmp-notice.warn {
+  background: var(--amber-soft);
+  border-color: var(--amber-border);
+  color: var(--amber);
+}
+.cmp-notice.error {
+  background: var(--negative-soft);
+  border-color: rgba(224, 107, 98, 0.3);
+  color: var(--negative);
+}
+
+/* --- empty drop zone --- */
+.cmp-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 280px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  background: rgba(110, 144, 201, 0.03);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+.cmp-empty svg {
+  color: var(--text-disabled);
+  transition: color 140ms ease;
+}
+.cmp-empty-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  max-width: 340px;
+}
+.cmp-empty-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  max-width: 340px;
+}
+.cmp-empty.over {
+  border-color: var(--accent);
+  border-style: solid;
+  background: var(--blue-tint);
+  color: var(--accent);
+}
+.cmp-empty.over svg {
+  color: var(--accent);
+}
+
+/* --- insertion overlay on a populated workspace --- */
+.cmp-drop-overlay {
+  position: absolute;
+  inset: 8px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed var(--accent-border);
+  border-radius: var(--radius);
+  background: rgba(110, 144, 201, 0.12);
+  transition: background 140ms ease, border-color 140ms ease, outline-color 140ms ease;
+}
+.cmp-drop-overlay-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.cmp-drop-overlay.over {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  outline: 1px solid var(--accent);
+  outline-offset: -4px;
+  color: var(--accent);
+}
+
+/* --- series chips --- */
+.cmp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cmp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 6px 0 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--pill);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  cursor: pointer;
+  max-width: 100%;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.cmp-chip:hover {
+  border-color: var(--border-strong);
+}
+.cmp-chip.on {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+.cmp-chip.over {
+  border-color: var(--accent);
+}
+.cmp-chip-grip {
+  display: inline-flex;
+  color: var(--text-disabled);
+  cursor: grab;
+}
+.cmp-chip-grip svg {
+  fill: currentColor;
+}
+.cmp-chip-grip:hover {
+  color: var(--text-muted);
+}
+.cmp-chip-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.cmp-chip-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+}
+.cmp-chip-text b {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.cmp-chip.on .cmp-chip-text b {
+  color: var(--accent);
+}
+.cmp-chip-metric {
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cmp-chip-meta {
+  color: var(--text-disabled);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.cmp-chip-x {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 3px;
+}
+.cmp-chip-x:hover {
+  color: var(--negative);
+}
+
+/* --- frequency aligner --- */
+.cmp-align {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cmp-align-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.cmp-align-note {
+  font-size: 11px;
+  color: var(--amber);
+}
+
+/* --- view container (chart / table / split) --- */
+.cmp-views {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* --- compare chart --- */
+.cmp-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cmp-chart-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cmp-chart-note {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.cmp-chart-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.cmp-chart-empty {
+  padding: 30px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  line-height: 1.5;
+}
+.seg.mini button:disabled {
+  color: var(--text-disabled);
+  cursor: default;
+}
+.trend-tip .tt-cover {
+  color: var(--text-muted);
+  font-size: 10.5px;
+  margin-top: 4px;
+  max-width: 168px;
+  line-height: 1.4;
+}
+
+/* --- compare table --- */
+.cmp-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+}
+.cmp-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.cmp-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 10.5px;
+  text-align: right;
+  padding: 0 10px;
+  height: 32px;
+  border-bottom: 1px solid var(--border);
+}
+.cmp-table th.cmp-t-name,
+.cmp-table td.cmp-t-name {
+  position: sticky;
+  left: 0;
+  text-align: left;
+  background: var(--surface-1);
+}
+.cmp-table thead th.cmp-t-name {
+  z-index: 3;
+  background: var(--surface-2);
+}
+.cmp-table td {
+  padding: 0 10px;
+  height: 34px;
+  text-align: right;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.cmp-table tbody tr {
+  cursor: pointer;
+}
+.cmp-table tbody tr:hover td {
+  background: var(--surface-hover);
+}
+.cmp-table tbody tr.on td {
+  background: var(--accent-soft);
+}
+.cmp-table tbody tr.on td.cmp-t-name {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.cmp-t-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  margin-right: 7px;
+}
+.cmp-t-metric {
+  text-align: left;
+  color: var(--text-secondary);
+}
+.cmp-t-cat {
+  color: var(--text-disabled);
+  font-size: 10px;
+  margin-left: 6px;
+}
+.cmp-t-per {
+  color: var(--text-muted);
+}
+.cmp-t-src,
+.cmp-t-cov {
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.cmp-table-foot {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  padding: 8px 4px 0;
+}
+
+/* --- source & coverage drawer --- */
+.cmp-source {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 6px;
+}
+.cmp-source-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.cmp-source-caret {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.cmp-source-count {
+  color: var(--text-disabled);
+}
+.cmp-source-flag {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: var(--pill);
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-border);
+  color: var(--amber);
+  font-size: 10.5px;
+}
+.cmp-source-warn {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-border);
+  color: var(--amber);
+  font-size: 11px;
+}
+.cmp-source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.cmp-source-item {
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+}
+.cmp-source-head {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.cmp-source-head b {
+  color: var(--text-primary);
+}
+.cmp-source-cat {
+  color: var(--text-disabled);
+  font-size: 10px;
+  margin-left: 6px;
+}
+.cmp-source-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px 16px;
+}
+.cmp-source-grid dt {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.cmp-source-grid dd {
+  margin: 1px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+/* --- drag ghost (custom drag image) --- */
+.cmp-drag-ghost {
+  padding: 7px 11px;
+  border-radius: var(--radius);
+  background: var(--tooltip-bg);
+  border: 1px solid var(--accent-border);
+  font-family: "Switzer", "Inter", system-ui, sans-serif;
+  pointer-events: none;
+  max-width: 280px;
+}
+.cmp-drag-ghost-1 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.cmp-drag-ghost-2 {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* --- drag handles (rows, columns, KPIs, metric selector) --- */
+.cmp-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px;
+  vertical-align: middle;
+  border-radius: 3px;
+  color: var(--text-disabled);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 140ms ease, color 140ms ease, background 140ms ease;
+}
+.cmp-grip svg {
+  fill: currentColor;
+}
+.cmp-grip:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.cmp-grip:active {
+  cursor: grabbing;
+}
+tbody tr:hover .cmp-grip.row-grip,
+thead th:hover .cmp-grip.col-grip,
+.kpi:hover .cmp-grip.kpi-grip,
+.cmp-grip:focus-visible {
+  opacity: 1;
+}
+.row-grip {
+  margin-left: 6px;
+}
+.col-grip {
+  margin-left: 4px;
+}
+.kpi {
+  position: relative;
+}
+.kpi-grip {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+.metric-grip {
+  opacity: 0.5;
+  margin-left: 2px;
+}
+.metric-grip:hover {
+  opacity: 1;
+}
+.tleg.draggable {
+  cursor: grab;
+}
+.tleg.draggable:active {
+  cursor: grabbing;
+}
+
+/* --- responsive reflow of the analysis pane by its OWN width (container queries),
+   so the workspace stays usable at any split ratio, not just at viewport breakpoints --- */
+@container (max-width: 1180px) {
+  .mainrow,
+  .mainrow.details,
+  .mainrow.norail,
+  .mainrow.details.norail {
+    grid-template-columns: 1fr;
+  }
+  .analysis-inner .rail {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 4px;
+    padding: 0 0 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .analysis-inner .rail .rail-title {
+    display: none;
+  }
+  .analysis-inner .rail .rail-item {
+    border: 1px solid var(--border-subtle);
+    height: 28px;
+    flex-shrink: 0;
+  }
+  .insights {
+    grid-template-columns: 1fr;
+  }
+  .kpis {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@container (max-width: 760px) {
+  .kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tabs {
+    grid-template-columns: 1fr;
+  }
+}
+@container (max-width: 520px) {
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* split view: side-by-side when the compare pane is wide enough, else stacked */
+@container (min-width: 720px) {
+  .cmp-views.split {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .cmp-views.split .cmp-chart {
+    flex: 1 1 58%;
+    min-width: 0;
+  }
+  .cmp-views.split .cmp-table-wrap {
+    flex: 1 1 42%;
+    min-width: 0;
+  }
+  .cmp-views.split > .cmp-table-wrap {
+    align-self: stretch;
+  }
+}
+
+/* stack the split panes on small viewports; the divider drag is disabled there */
+@media (max-width: 860px) {
+  .cmp-split.open:not(.expanded) {
+    flex-direction: column;
+  }
+  .cmp-split.open:not(.expanded) .cmp-pane-analysis {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+  .cmp-divider {
+    display: none;
+  }
+  .cmp-pane-compare {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
 }

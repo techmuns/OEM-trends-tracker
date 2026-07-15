@@ -4,8 +4,20 @@
 import { deltaDir, Delta, RevisedBadge } from "./ui";
 import { fmtPct, fmtPp, fmtShare, fmtUnits, shortName } from "../lib/format";
 import type { TableRow } from "../lib/view";
+import type { CompareSeries } from "../lib/compare";
+import { DragHandle } from "../lib/dragfx";
 
 export type DisplayMode = "both" | "absolute" | "yoy";
+
+// Optional drag-to-compare wiring. Rows drag the page's active metric; the value/share column
+// headers drag that metric for the selected (or leading) company. Purely additive — omitted
+// everywhere the table is used outside the Compare feature.
+export interface TableCompare {
+  rowMake: (company: string) => CompareSeries | null;
+  valueMake?: () => CompareSeries | null; // value column header → volume metric for selected/leader
+  shareMake?: () => CompareSeries | null; // share column header → share metric for selected/leader
+  add: (s: CompareSeries) => void;
+}
 
 function Num({ n }: { n: number | null }) {
   return n === null ? <span className="dash">—</span> : <>{fmtUnits(n)}</>;
@@ -21,6 +33,7 @@ export function ComparisonTable({
   expanded,
   onSelect,
   onHover,
+  compare,
 }: {
   rows: TableRow[];
   total: TableRow | null;
@@ -31,6 +44,7 @@ export function ComparisonTable({
   expanded?: boolean;
   onSelect: (company: string) => void;
   onHover?: (company: string | null) => void;
+  compare?: TableCompare;
 }) {
   const showPrior = mode !== "yoy";
   const showYoY = mode !== "absolute";
@@ -49,6 +63,14 @@ export function ComparisonTable({
         {selected === r.company && !isTotal ? <span className="oem-star">★</span> : ""}
         {isTotal ? "TOTAL / REPORTED UNIVERSE" : shortName(r.company)}{" "}
         {r.revised && <RevisedBadge />}
+        {compare && !isTotal && (
+          <DragHandle
+            build={() => compare.rowMake(r.company)}
+            onAdd={compare.add}
+            label={shortName(r.company)}
+            className="row-grip"
+          />
+        )}
       </td>
       <td>
         <Num n={r.cur} />
@@ -76,10 +98,20 @@ export function ComparisonTable({
             <th className="oem" scope="col">
               OEM
             </th>
-            <th scope="col">{curLabel}</th>
+            <th scope="col">
+              {curLabel}
+              {compare?.valueMake && (
+                <DragHandle build={compare.valueMake} onAdd={compare.add} label="value column" className="col-grip" />
+              )}
+            </th>
             {showPrior && <th scope="col">{priorLabel}</th>}
             {showYoY && <th scope="col">YoY</th>}
-            <th scope="col">{curLabel} Share</th>
+            <th scope="col">
+              {curLabel} Share
+              {compare?.shareMake && (
+                <DragHandle build={compare.shareMake} onAdd={compare.add} label="share column" className="col-grip" />
+              )}
+            </th>
             {showChg && <th scope="col">Share Δ (pp)</th>}
           </tr>
         </thead>

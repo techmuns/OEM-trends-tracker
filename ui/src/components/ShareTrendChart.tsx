@@ -7,6 +7,14 @@
 
 import { useRef, useState } from "react";
 import { fmtPct, fmtPp, fmtShare, fmtUnits, fmtUnitsCompact } from "../lib/format";
+import type { CompareSeries } from "../lib/compare";
+import { dragProps } from "../lib/dragfx";
+
+// Optional drag-to-compare wiring for legend items (chart series). Additive — the chart works
+// exactly as before when omitted.
+export interface LegendCompare {
+  make: (name: string) => CompareSeries | null;
+}
 
 // Focus/highlight colour is theme-driven. SVG presentation attributes don't resolve CSS
 // var() reliably, so theme colours are applied via inline `style` throughout this component.
@@ -44,6 +52,7 @@ export function ShareTrendChart({
   yLabel = "Market share (%)",
   domain,
   onLock,
+  compare,
 }: {
   lines: TrendLine[];
   focusName: string | null; // external focus (e.g. table-row hover)
@@ -53,6 +62,7 @@ export function ShareTrendChart({
   yLabel?: string;
   domain?: [number, number]; // fixed y-domain (e.g. [0,1] for complementary EV/ICE shares)
   onLock: (name: string) => void;
+  compare?: LegendCompare;
 }) {
   const fmtVal = (v: number) => (valueKind === "share" ? fmtShare(v) : fmtUnitsCompact(v));
   const fmtTick = (v: number) => (valueKind === "share" ? (v * 100).toFixed(0) + "%" : fmtUnitsCompact(v));
@@ -324,11 +334,12 @@ export function ShareTrendChart({
           return (
             <button
               key={l.name}
-              className={`tleg ${isFocus ? "on" : ""} ${effFocus && !isFocus ? "off" : ""}`}
+              className={`tleg ${isFocus ? "on" : ""} ${effFocus && !isFocus ? "off" : ""} ${compare ? "draggable" : ""}`}
               onMouseEnter={() => setLegendHover(l.name)}
               onMouseLeave={() => setLegendHover(null)}
               onClick={() => onLock(l.name)}
-              title={`Focus ${l.display}`}
+              title={compare ? `Focus ${l.display} · drag to compare` : `Focus ${l.display}`}
+              {...(compare ? dragProps(() => compare.make(l.name)) : {})}
             >
               <i style={{ background: isFocus ? FOCUS : l.color }} />
               {l.display}

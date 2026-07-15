@@ -4,8 +4,14 @@ import { useHostContext, useSnapshotMode } from "./lib/host";
 import type { CategoryInfo, Flow, Period, PeriodType, Point, Powertrain, ViewModel } from "./lib/types";
 import { buildTable, getSeries, priorKey, type TableRow } from "./lib/view";
 import { fmtPct, fmtPp, fmtShare, fmtUnits, fmtUnitsCompact, monthYear, shortName } from "./lib/format";
-import { ComparisonTable, type DisplayMode } from "./components/ComparisonTable";
-import { ShareTrendChart, type TrendLine, type TrendPoint, type ValueKind } from "./components/ShareTrendChart";
+import { ComparisonTable, type DisplayMode, type TableCompare } from "./components/ComparisonTable";
+import { ShareTrendChart, type LegendCompare, type TrendLine, type TrendPoint, type ValueKind } from "./components/ShareTrendChart";
+import { buildSeries, type CompareSeries, type MetricKey } from "./lib/compare";
+import { CompareProvider, useCompare } from "./lib/useCompare";
+import { DragHandle } from "./lib/dragfx";
+import { CompareDockTab } from "./components/compare/CompareDockTab";
+import { DockedCompareWorkspace } from "./components/compare/DockedCompareWorkspace";
+import { ResizableSplitPane } from "./components/compare/ResizableSplitPane";
 import {
   Delta,
   deltaDir,
@@ -35,6 +41,16 @@ const ICE_LINE = "var(--ice)";
 const RANK_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)"];
 
 export function App() {
+  // Compare state lives ABOVE the category loader so the workspace survives category and page
+  // switches within a session.
+  return (
+    <CompareProvider>
+      <AppInner />
+    </CompareProvider>
+  );
+}
+
+function AppInner() {
   const manifest = useManifest();
   if (manifest.status === "loading")
     return (
@@ -139,6 +155,7 @@ function Dashboard({
 }) {
   const host = useHostContext();
   const snapshot = useSnapshotMode();
+  const compare = useCompare();
   const [tab, setTab] = useQuery<Tab>("tab", "sales");
   const [rawPt, setPt] = useQuery<PeriodType>("pt", "month");
   const [mode, setMode] = useQuery<DisplayMode>("mode", "both");
@@ -208,65 +225,77 @@ function Dashboard({
           <button className="btn export accent" onClick={() => window.print()} title="Export current view (print / PDF)">
             ↧ Export
           </button>
+          <CompareDockTab />
         </div>
       </header>
 
       <main className="zone2">
-        <div className="tabs" role="tablist">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              role="tab"
-              aria-selected={tab === t.id}
-              className={`tab ${tab === t.id ? "active" : ""}`}
-              onClick={() => setTab(t.id)}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <ResizableSplitPane
+          open={compare.isOpen}
+          expanded={compare.expanded}
+          ratio={compare.ratio}
+          onRatio={compare.setRatio}
+          left={
+            <div className="analysis-inner">
+              <div className="tabs" role="tablist">
+                {TABS.map((t) => (
+                  <button
+                    key={t.id}
+                    role="tab"
+                    aria-selected={tab === t.id}
+                    className={`tab ${tab === t.id ? "active" : ""}`}
+                    onClick={() => setTab(t.id)}
+                  >
+                    {t.icon}
+                    {t.label}
+                  </button>
+                ))}
+              </div>
 
-        <PeriodChips axis={axis} pt={pt} periodKey={period?.key ?? ""} onChange={setPeriodKey} />
+              <PeriodChips axis={axis} pt={pt} periodKey={period?.key ?? ""} onChange={setPeriodKey} />
 
-        {tab === "sales" && (
-          <SalesTab
-            view={view}
-            pt={pt}
-            period={period}
-            setPeriod={setPeriodKey}
-            mode={mode}
-            setMode={setMode}
-            oem={oem}
-            setOem={setOem}
-          />
-        )}
-        {tab === "ev" && (
-          <EvTab
-            view={view}
-            pt={pt}
-            period={period}
-            setPeriod={setPeriodKey}
-            oem={oem}
-            setOem={setOem}
-            mode={mode}
-            setMode={setMode}
-          />
-        )}
-        {tab === "prod" && (
-          <ProdTab
-            view={view}
-            pt={pt}
-            period={period}
-            setPeriod={setPeriodKey}
-            oem={oem}
-            setOem={setOem}
-            mode={mode}
-            setMode={setMode}
-          />
-        )}
+              {tab === "sales" && (
+                <SalesTab
+                  view={view}
+                  pt={pt}
+                  period={period}
+                  setPeriod={setPeriodKey}
+                  mode={mode}
+                  setMode={setMode}
+                  oem={oem}
+                  setOem={setOem}
+                />
+              )}
+              {tab === "ev" && (
+                <EvTab
+                  view={view}
+                  pt={pt}
+                  period={period}
+                  setPeriod={setPeriodKey}
+                  oem={oem}
+                  setOem={setOem}
+                  mode={mode}
+                  setMode={setMode}
+                />
+              )}
+              {tab === "prod" && (
+                <ProdTab
+                  view={view}
+                  pt={pt}
+                  period={period}
+                  setPeriod={setPeriodKey}
+                  oem={oem}
+                  setOem={setOem}
+                  mode={mode}
+                  setMode={setMode}
+                />
+              )}
 
-        <Provenance view={view} />
+              <Provenance view={view} />
+            </div>
+          }
+          right={<DockedCompareWorkspace />}
+        />
       </main>
     </div>
   );
@@ -386,6 +415,7 @@ function Kpi({
   cmp,
   scope,
   caveat,
+  compare,
 }: {
   label: string;
   value: string;
@@ -393,9 +423,10 @@ function Kpi({
   cmp?: React.ReactNode;
   scope?: string;
   caveat?: string;
+  compare?: { make: () => CompareSeries | null; add: (s: CompareSeries) => void };
 }) {
   return (
-    <div className="card kpi">
+    <div className={`card kpi ${compare ? "kpi-draggable" : ""}`}>
       <div className="label">
         {label}
         {caveat && (
@@ -404,6 +435,7 @@ function Kpi({
           </span>
         )}
       </div>
+      {compare && <DragHandle build={compare.make} onAdd={compare.add} label={label} className="kpi-grip" />}
       <div className={`value ${valueClass ?? ""}`}>{value}</div>
       {cmp && <div className="cmp">{cmp}</div>}
       {scope && <div className="scope">{scope}</div>}
@@ -541,6 +573,7 @@ interface TableConfig {
   priorLabel: string;
   partial?: { present: number; expected: number };
   unavailable?: React.ReactNode; // render instead of the table (honest coverage message)
+  compare?: TableCompare; // drag-to-compare wiring (rows + metric column headers)
 }
 interface ChartConfig {
   title: string;
@@ -558,6 +591,7 @@ interface ChartConfig {
   hint?: string;
   emptyNote?: React.ReactNode; // render instead of the chart (coverage explanation)
   onLock: (name: string) => void;
+  compare?: LegendCompare; // drag-to-compare wiring (chart legend items)
 }
 function AnalyticalTab({
   axis,
@@ -626,6 +660,7 @@ function AnalyticalTab({
           expanded={details}
           onSelect={(c) => setOem(c)}
           onHover={setHoverOem}
+          compare={table.compare}
         />
       ) : (
         <Empty onReset={() => setOem("")} />
@@ -669,6 +704,7 @@ function AnalyticalTab({
             domain={chart.domain}
             showYoY={chart.showYoY}
             onLock={chart.onLock}
+            compare={chart.compare}
           />
           {chart.summary && (
             <div className="trend-summary">
@@ -719,10 +755,12 @@ function SalesTab({
   oem: string;
   setOem: (v: string) => void;
 }) {
+  const compare = useCompare();
   const [rangeIdx, setRangeIdx] = useState(1);
   const [hoverOem, setHoverOem] = useState<string | null>(null);
   const axis = view.periods[pt];
   const TOTAL = view.meta.industry_total_label;
+  const mk = (company: string, metric: MetricKey) => buildSeries(view, company, metric);
   const key = period.key;
   const priorL = labelFor(axis, priorKey(pt, key));
   const industry = pick(view, TOTAL, "domestic", "all", pt, key);
@@ -755,6 +793,7 @@ function SalesTab({
   const evP = evAxis[evAxis.length - 1];
   const evPen = evP ? view.ev_penetration["domestic"]?.[pt]?.[evP.key] ?? null : null;
 
+  const colCompany = oem || rows[0]?.company;
   const table: TableConfig = {
     title: `OEM Sales & Share Snapshot — ${period.label} vs ${priorL}`,
     subtitle: "Wholesale dispatches · SIAM reported universe",
@@ -763,6 +802,12 @@ function SalesTab({
     curLabel: period.label,
     priorLabel: priorL,
     partial: partial ? { present: industry!.present, expected: industry!.expected } : undefined,
+    compare: {
+      rowMake: (c) => mk(c, "sales"),
+      valueMake: colCompany ? () => mk(colCompany, "sales") : undefined,
+      shareMake: colCompany ? () => mk(colCompany, "market_share") : undefined,
+      add: compare.add,
+    },
   };
   const chart: ChartConfig = {
     title: `Market Share Trend — ${oem ? shortName(oem) : "Top OEMs"}`,
@@ -777,6 +822,7 @@ function SalesTab({
     lockedName: oem || null,
     summary: oem ? focusSummary(trendLines.find((l) => l.name === oem), "share") : null,
     onLock: (name) => setOem(name),
+    compare: { make: (name) => mk(name, "market_share") },
   };
 
   return (
@@ -788,10 +834,17 @@ function SalesTab({
           cmp={yoyNode(industry)}
           scope={period.label}
           caveat="Total wholesale dispatches within the reported SIAM universe (not the whole market)."
+          compare={{ make: () => mk(TOTAL, "sales"), add: compare.add }}
         />
         {oem ? (
           <>
-            <Kpi label={`${shortName(oem)} Sales`} value={fmtUnitsCompact(sel?.v)} cmp={yoyNode(sel)} scope={period.label} />
+            <Kpi
+              label={`${shortName(oem)} Sales`}
+              value={fmtUnitsCompact(sel?.v)}
+              cmp={yoyNode(sel)}
+              scope={period.label}
+              compare={{ make: () => mk(oem, "sales"), add: compare.add }}
+            />
             <Kpi
               label="YoY Growth"
               value={sel?.yoy == null ? "—" : fmtPct(sel.yoy)}
@@ -806,6 +859,7 @@ function SalesTab({
                 view.meta.share_caveat +
                 (view.meta.has_ev ? " Some pure-EV makers (e.g. Ola) are not SIAM members, so EV share is understated." : "")
               }
+              compare={{ make: () => mk(oem, "market_share"), add: compare.add }}
             />
             <Kpi
               label="Share Change (pp)"
@@ -823,6 +877,7 @@ function SalesTab({
               cmp={leader?.chg != null ? <Delta text={fmtPp(leader.chg)} dir={deltaDir(leader.chg)} /> : undefined}
               scope={leader ? shortName(leader.company) : undefined}
               caveat="Largest OEM by current-period sales, and its share of the reported universe."
+              compare={leader ? { make: () => mk(leader.company, "market_share"), add: compare.add } : undefined}
             />
             <Kpi label="Industry YoY" value={industry?.yoy == null ? "—" : fmtPct(industry.yoy)} scope={`vs ${priorL}`} />
             <Kpi
@@ -837,6 +892,7 @@ function SalesTab({
                 value={fmtShare(evPen)}
                 scope={evP ? `EV of ${view.meta.category} · ${evP.label}` : "—"}
                 caveat={view.meta.share_caveat + " Pure-EV makers outside SIAM are excluded, so this understates EV."}
+                compare={{ make: () => mk("Industry", "ev_penetration"), add: compare.add }}
               />
             ) : (
               <Kpi
@@ -844,6 +900,7 @@ function SalesTab({
                 value={fmtUnitsCompact(pick(view, TOTAL, "export", "all", pt, key)?.v)}
                 scope={period.label}
                 caveat={`Wholesale ${view.meta.category} exports within the reported SIAM universe. EV is not broken out for this category — EV-only makers are counted inline.`}
+                compare={{ make: () => mk(TOTAL, "exports"), add: compare.add }}
               />
             )}
           </>
@@ -939,6 +996,8 @@ function EvTab({
   mode: DisplayMode;
   setMode: (v: DisplayMode) => void;
 }) {
+  const compare = useCompare();
+  const mk = (company: string, metric: MetricKey) => buildSeries(view, company, metric);
   const [rangeIdx, setRangeIdx] = useState(1);
   const [hoverOem, setHoverOem] = useState<string | null>(null);
 
@@ -999,6 +1058,7 @@ function EvTab({
       lockedName: oem || null,
       summary: oem ? focusSummary(lines.find((l) => l.name === oem), "share") : null,
       onLock: (name) => setOem(name),
+      compare: { make: (name) => mk(name, "ev_share") },
     };
   } else {
     chart = {
@@ -1018,9 +1078,11 @@ function EvTab({
       onLock: (name) => {
         if (name !== "EV" && name !== "ICE") setOem(name);
       },
+      compare: { make: (name) => (name === "EV" ? mk("Industry", "ev_penetration") : null) },
     };
   }
 
+  const colCompany = oem || rows[0]?.company;
   const table: TableConfig = {
     title: `EV OEM Sales & Share Snapshot — ${evPeriod.label} vs ${priorEvL}`,
     subtitle: "EV volume · share within reported EV universe",
@@ -1028,6 +1090,12 @@ function EvTab({
     total,
     curLabel: evPeriod.label,
     priorLabel: priorEvL,
+    compare: {
+      rowMake: (c) => mk(c, "ev_share"),
+      valueMake: colCompany ? () => mk(colCompany, "ev_volume") : undefined,
+      shareMake: colCompany ? () => mk(colCompany, "ev_share") : undefined,
+      add: compare.add,
+    },
   };
 
   return (
@@ -1039,7 +1107,13 @@ function EvTab({
         </Unavailable>
       )}
       <div className="kpis" style={{ marginTop: frozen ? 12 : 0 }}>
-        <Kpi label="EV Volume" value={fmtUnitsCompact(evInd?.v)} cmp={yoyNode(evInd)} scope={evPeriod.label} />
+        <Kpi
+          label="EV Volume"
+          value={fmtUnitsCompact(evInd?.v)}
+          cmp={yoyNode(evInd)}
+          scope={evPeriod.label}
+          compare={{ make: () => mk(TOTAL, "ev_volume"), add: compare.add }}
+        />
         <Kpi label="EV YoY" value={evInd?.yoy == null ? "—" : fmtPct(evInd.yoy)} scope={`vs ${priorEvL}`} />
         <Kpi
           label="EV Penetration"
@@ -1047,6 +1121,7 @@ function EvTab({
           cmp={pen != null && penPrior != null ? <Delta text={`${fmtPp(pen - penPrior)} YoY`} dir={deltaDir(pen - penPrior)} /> : undefined}
           scope="within reported SIAM universe"
           caveat="EV penetration within reported SIAM universe. Pure-EV makers outside SIAM are excluded, so this understates EV."
+          compare={{ make: () => mk("Industry", "ev_penetration"), add: compare.add }}
         />
         <Kpi label="ICE Volume" value={fmtUnitsCompact(ice.v)} scope={evPeriod.label} />
         <Kpi label="ICE Share" value={pen == null ? "—" : fmtShare(1 - pen)} scope="of reported universe" />
@@ -1091,6 +1166,8 @@ function ProdTab({
   mode: DisplayMode;
   setMode: (v: DisplayMode) => void;
 }) {
+  const compare = useCompare();
+  const mk = (company: string, metric: MetricKey) => buildSeries(view, company, metric);
   const [rangeIdx, setRangeIdx] = useState(1);
   const [hoverOem, setHoverOem] = useState<string | null>(null);
   const axis = view.periods[pt];
@@ -1171,6 +1248,8 @@ function ProdTab({
     const extra = hoverOem && !baseNames.includes(hoverOem) ? [hoverOem] : [];
     const lines = buildTrendLines(view, [...baseNames, ...extra], baseNames, flow, "all", pt, winAxis, chartAxis, "volume");
     const metricLabel = isExports ? "Export" : "Production";
+    const metricKey: MetricKey = isExports ? "exports" : "production";
+    const colCompany = oem || data.rows[0]?.company;
     table = {
       title: isExports
         ? `OEM Export Snapshot — ${curPeriod.label} vs ${curPriorL}`
@@ -1180,6 +1259,11 @@ function ProdTab({
       total: data.total,
       curLabel: curPeriod.label,
       priorLabel: curPriorL,
+      compare: {
+        rowMake: (c) => mk(c, metricKey),
+        valueMake: colCompany ? () => mk(colCompany, metricKey) : undefined,
+        add: compare.add,
+      },
     };
     chart = {
       title: `${metricLabel} Trend — ${oem ? shortName(oem) : "Top OEMs"}`,
@@ -1196,17 +1280,31 @@ function ProdTab({
       lockedName: oem || null,
       summary: oem ? focusSummary(lines.find((l) => l.name === oem), "volume") : null,
       onLock: (name) => setOem(name),
+      compare: { make: (name) => mk(name, metricKey) },
     };
   }
 
   return (
     <>
       <div className="kpis">
-        <Kpi label="Total Exports" value={fmtUnitsCompact(expInd?.v)} cmp={yoyNode(expInd)} scope={period.label} />
+        <Kpi
+          label="Total Exports"
+          value={fmtUnitsCompact(expInd?.v)}
+          cmp={yoyNode(expInd)}
+          scope={period.label}
+          compare={{ make: () => mk(TOTAL, "exports"), add: compare.add }}
+        />
         <Kpi
           label={oem ? `${shortName(oem)} Exports` : "Export Leader"}
           value={oem ? fmtUnitsCompact(pick(view, oem, "export", "all", pt, key)?.v) : fmtShare(exp.rows[0]?.share)}
           scope={oem ? period.label : exp.rows[0] ? shortName(exp.rows[0].company) : "—"}
+          compare={
+            oem
+              ? { make: () => mk(oem, "exports"), add: compare.add }
+              : exp.rows[0]
+                ? { make: () => mk(exp.rows[0].company, "exports"), add: compare.add }
+                : undefined
+          }
         />
         <Kpi label="Export YoY" value={expInd?.yoy == null ? "—" : fmtPct(expInd.yoy)} scope={`vs ${priorL}`} />
         <Kpi
@@ -1218,6 +1316,7 @@ function ProdTab({
               ? "Source-reported quarterly production (Commercial Vehicles)."
               : `Production is reported only for Commercial Vehicles (source-reported quarterly). Not available for ${view.meta.category_label.toLowerCase()}.`
           }
+          compare={prodSupported ? { make: () => mk(TOTAL, "production"), add: compare.add } : undefined}
         />
         <Kpi
           label="Export Share Leader"
@@ -1236,6 +1335,14 @@ function ProdTab({
             Production
           </button>
         </div>
+        {(isExports || prodSupported) && (
+          <DragHandle
+            build={() => mk(TOTAL, isExports ? "exports" : "production")}
+            onAdd={compare.add}
+            label={`${isExports ? "Exports" : "Production"} metric`}
+            className="metric-grip"
+          />
+        )}
       </div>
 
       <AnalyticalTab
