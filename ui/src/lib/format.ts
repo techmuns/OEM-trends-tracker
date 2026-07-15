@@ -55,3 +55,26 @@ export function monthYear(iso: string): string {
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 }
+
+// Compact display names. The source uses full legal names (e.g. "Honda Motorcycle &
+// Scooter India"); tables, chips and chart labels read better with the common name.
+// Display-only — selection, totals and math still key off the canonical company string.
+const SHORT_NAME: Record<string, string> = {
+  "Honda Motorcycle & Scooter India": "Honda",
+  "TVS Motor Company": "TVS",
+  "Bajaj Auto": "Bajaj",
+  "Ather Energy": "Ather",
+  "Suzuki Motorcycle India": "Suzuki",
+  "India Yamaha Motor": "Yamaha",
+  "India Kawasaki Motors": "Kawasaki",
+  "Harley-Davidson India": "Harley-Davidson",
+  "Mahindra Two Wheelers": "Mahindra",
+  "Okinawa Autotech": "Okinawa",
+  "Piaggio Vehicles": "Piaggio",
+  "Triumph Motorcycles India": "Triumph",
+  "UM Lohia Two Wheelers": "UM Lohia",
+};
+
+export function shortName(company: string): string {
+  return SHORT_NAME[company] ?? company;
+}

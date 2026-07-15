@@ -2,7 +2,7 @@
 // Sticky OEM column + sticky header. Values are precomputed; this only selects and formats.
 
 import { deltaDir, Delta, RevisedBadge } from "./ui";
-import { fmtPct, fmtPp, fmtShare, fmtUnits } from "../lib/format";
+import { fmtPct, fmtPp, fmtShare, fmtUnits, shortName } from "../lib/format";
 import type { TableRow } from "../lib/view";
 
 export type DisplayMode = "both" | "absolute" | "yoy";
@@ -18,6 +18,7 @@ export function ComparisonTable({
   priorLabel,
   mode,
   selected,
+  expanded,
   onSelect,
 }: {
   rows: TableRow[];
@@ -26,6 +27,7 @@ export function ComparisonTable({
   priorLabel: string;
   mode: DisplayMode;
   selected?: string;
+  expanded?: boolean;
   onSelect: (company: string) => void;
 }) {
   const showPrior = mode !== "yoy";
@@ -35,8 +37,8 @@ export function ComparisonTable({
   const render = (r: TableRow, isTotal = false) => (
     <tr key={r.company} className={isTotal ? "total" : selected === r.company ? "sel" : undefined}>
       <td className="oem" onClick={() => !isTotal && onSelect(r.company)}>
-        {selected === r.company && !isTotal ? "★ " : ""}
-        {isTotal ? "TOTAL / REPORTED UNIVERSE" : r.company}{" "}
+        {selected === r.company && !isTotal ? <span className="oem-star">★</span> : ""}
+        {isTotal ? "TOTAL / REPORTED UNIVERSE" : shortName(r.company)}{" "}
         {r.revised && <RevisedBadge />}
       </td>
       <td>
@@ -58,7 +60,7 @@ export function ComparisonTable({
   );
 
   return (
-    <div className="tbl-wrap">
+    <div className={`tbl-wrap ${expanded ? "expanded" : ""}`}>
       <table>
         <thead>
           <tr>

@@ -12,11 +12,15 @@ export function TrendChart({
   height = 200,
   yFormat = (n: number) => String(Math.round(n)),
   ariaLabel,
+  domain,
 }: {
   series: ChartSeries[];
   height?: number;
   yFormat?: (n: number) => string;
   ariaLabel?: string;
+  // Optional fixed [min, max]. Use for complementary shares (e.g. EV vs ICE → [0, 1])
+  // so the axis never pads into impossible negative or >100% territory.
+  domain?: [number, number];
 }) {
   const W = 640;
   const H = height;
@@ -33,10 +37,13 @@ export function TrendChart({
   }
   let min = Math.min(...vals);
   let max = Math.max(...vals);
-  const pad = (max - min) * 0.12 || Math.abs(max) * 0.1 || 1;
-  min -= pad;
-  max -= 0; // keep top tight but padded below
-  max += pad;
+  if (domain) {
+    [min, max] = domain;
+  } else {
+    const pad = (max - min) * 0.12 || Math.abs(max) * 0.1 || 1;
+    min -= pad;
+    max += pad;
+  }
   const x = (i: number) => padL + (i / (n - 1)) * (W - padL - padR);
   const y = (v: number) => padT + (1 - (v - min) / (max - min)) * (H - padT - padB);
 
@@ -48,15 +55,15 @@ export function TrendChart({
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel ?? "trend chart"}>
         {tickVals.map((tv, i) => (
           <g key={i}>
-            <line x1={padL} x2={W - padR} y1={y(tv)} y2={y(tv)} stroke="#eef0f3" strokeWidth={1} />
-            <text x={padL - 8} y={y(tv) + 3} textAnchor="end" fontSize={10} fill="#9ca3af">
+            <line x1={padL} x2={W - padR} y1={y(tv)} y2={y(tv)} stroke="rgba(255,247,221,0.08)" strokeWidth={1} />
+            <text x={padL - 8} y={y(tv) + 3} textAnchor="end" fontSize={10} fill="rgba(255,247,221,0.46)">
               {yFormat(tv)}
             </text>
           </g>
         ))}
         {/* x labels: first, middle, last */}
         {[0, Math.floor((n - 1) / 2), n - 1].map((i) => (
-          <text key={i} x={x(i)} y={H - 6} textAnchor="middle" fontSize={10} fill="#9ca3af">
+          <text key={i} x={x(i)} y={H - 6} textAnchor="middle" fontSize={10} fill="rgba(255,247,221,0.46)">
             {labels[i]}
           </text>
         ))}
