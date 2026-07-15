@@ -1,0 +1,40 @@
+name: Monthly ingest
+
+# The self-driving feed. Runs monthly and on-demand. In Phase 0 it is a no-op that exits 0
+# (no adapter configured yet). From Phase 2 it fetches -> validates -> (on all gates pass)
+# commits a new snapshot + bundle, which Cloudflare Pages then auto-deploys. On any gate
+# failure it quarantines the payload and FAILS the workflow — that failure is the alert,
+# and the last good bundle stays live.
+on:
+  schedule:
+    # 06:30 UTC on the 3rd of each month (SIAM monthly data lands early in the month).
+    - cron: "30 6 3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write  # Phase 2 commits new snapshots/bundle back to the repo
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    name: ingest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+
+      - name: Install Python deps
+        run: uv sync --extra dev
+
+      - name: Run ingest
+        run: uv run python -m pipeline.ingest

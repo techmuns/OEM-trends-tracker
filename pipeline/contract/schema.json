@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oem-tracker/contract/schema.json",
+  "title": "Bundle",
+  "description": "OEM Tracker frozen data contract. contract_version 1.0.0. One tidy row per observation (long format). The bundle is the artifact the UI reads. See docs/contract-coverage.md for the widget->field mapping and the non-negotiable rules.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "generated_at", "source_universe_label", "rows"],
+  "properties": {
+    "contract_version": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Frozen contract version. Bump only on a breaking schema change."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this bundle was built. Injected by the builder; never derived from wall-clock inside pure logic."
+    },
+    "source_universe_label": {
+      "type": "string",
+      "description": "Human label for share denominators. For SIAM: 'Share within reported SIAM universe'. Lives in the contract, never hardcoded in UI."
+    },
+    "rows": {
+      "type": "array",
+      "description": "The tidy observation rows.",
+      "items": { "$ref": "#/$defs/ContractRow" }
+    }
+  },
+  "$defs": {
+    "ContractRow": {
+      "title": "ContractRow",
+      "type": "object",
+      "additionalProperties": false,
+      "description": "One observation. Long format: never one column per month. 0 and null are DISTINCT (0 = source-reported zero / not-launched; null = not reported). Never sum across inclusive dimension values (powertrain all>=ev; flow total>=domestic+export).",
+      "required": [
+        "period_date", "period_type", "fiscal_year", "fiscal_quarter",
+        "category", "segment", "sub_segment", "company_canonical", "company_raw",
+        "flow", "powertrain", "geography",
+        "metric", "value", "unit",
+        "source", "source_file", "source_period", "native_frequency", "calc_status",
+        "revision", "ingest_date", "confidence", "is_superseded",
+        "is_partial", "periods_present", "periods_expected"
+      ],
+      "properties": {
+        "period_date": {
+          "type": "string",
+          "format": "date",
+          "description": "First day of the period, e.g. 2026-06-01."
+        },
+        "period_type": {
+          "type": "string",
+          "enum": ["month", "quarter", "year"]
+        },
+        "fiscal_year": {
+          "type": "string",
+          "pattern": "^FY[0-9]{2}$",
+          "description": "Fiscal year Apr-Mar, e.g. 'FY26' = Apr 2025 - Mar 2026."
+        },
+        "fiscal_quarter": {
+          "type": ["string", "null"],
+          "pattern": "^Q[1-4]FY[0-9]{2}$",
+          "description": "e.g. 'Q1FY26' = Apr-Jun 2025. Null for yearly rows."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["2W", "PV", "3W", "TRACTOR", "CV"],
+          "description": "Vehicle category. A dimension, never an assumption. v1 seeds 2W but the contract holds all."
+        },
+        "segment": {
+          "type": ["string", "null"],
+          "description": "e.g. 'Scooter', 'Motor cycles', 'Mopeds' (2W); 'PC', 'UV', 'Van' (PV); 'MHCV', 'LCV' (CV)."
+        },
+        "sub_segment": {
+          "type": ["string", "null"]
+        },
+        "company_canonical": {
+          "type": "string",
+          "description": "Resolved via dictionaries/companies.yaml."
+        },
+        "company_raw": {
+          "type": "string",
+          "description": "Exactly as it appeared in the source. Kept so a bad mapping is always traceable and reversible."
+        },
+        "flow": {
+          "type": "string",
+          "enum": ["domestic", "export", "production", "total"],
+          "description": "Different measurements, not variants of 'sales'. total >= domestic + export; never sum total with its parts."
+        },
+        "powertrain": {
+          "type": "string",
+          "enum": ["all", "ev", "ice"],
+          "description": "Source reports 'all' and 'ev' (ev is a SUBSET of all). 'ice' is DERIVED = all - ev. Never sum across these values."
+        },
+        "geography": {
+          "type": "string",
+          "default": "IN"
+        },
+        "metric": {
+          "type": "string",
+          "enum": ["units"],
+          "description": "What is measured. Extensible (e.g. 'value') later without a breaking change to consumers."
+        },
+        "value": {
+          "type": ["number", "null"],
+          "description": "The measurement. 0 and null are DISTINCT and must never be coerced into each other."
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["units"]
+        },
+        "source": {
+          "type": "string",
+          "enum": ["SIAM", "VAHAN", "BROKER", "MANUAL"],
+          "description": "On every row. Enforces the one-source-per-table rule and encodes measurement basis (SIAM=wholesale dispatches, VAHAN=registrations) via metrics.yaml."
+        },
+        "source_file": {
+          "type": "string",
+          "description": "The dropped source file this row came from (audit trail)."
+        },
+        "source_period": {
+          "type": "string",
+          "description": "The period the source file reports as-of."
+        },
+        "native_frequency": {
+          "type": "string",
+          "enum": ["month", "quarter", "year"],
+          "description": "What the source ACTUALLY reported. CV is quarterly-native; everything else monthly-native."
+        },
+        "calc_status": {
+          "type": "string",
+          "enum": ["reported", "derived"],
+          "description": "reported = literal from source. derived = summed M->Q->Y OR ice = all - ev."
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "0,1,2... A newer file correcting an old period writes revision+1 and supersedes the old row."
+        },
+        "ingest_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["high", "medium", "low"]
+        },
+        "is_superseded": {
+          "type": "boolean",
+          "description": "True once a newer revision replaces this row. Never delete; always supersede."
+        },
+        "is_partial": {
+          "type": "boolean",
+          "description": "True for an incomplete period (YTD / QTD / running month). Drives the 'YTD'/'Quarter to date' labels."
+        },
+        "periods_present": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Constituent sub-periods actually present in a derived aggregate (e.g. 2 months of a quarter). Null when reported/complete."
+        },
+        "periods_expected": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Constituent sub-periods a complete aggregate would have (e.g. 3 for a quarter). Null when reported/complete."
+        }
+      }
+    }
+  }
+}

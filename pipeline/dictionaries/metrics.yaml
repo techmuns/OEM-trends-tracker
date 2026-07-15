@@ -1,0 +1,57 @@
+# Metric definitions + display labels.
+#
+# The contract `metric` enum is machine-facing ("units"). This file holds the HUMAN
+# meaning: the measurement basis (dispatches vs registrations vs production), the display
+# labels, and the provenance caveat text. Per the locked decision, the measurement basis
+# is DERIVED from `source` rather than stored as a row column — this file is where that
+# derivation gets its human label, keyed by (source, flow).
+#
+# Rule (design "Data integrity"): sales, wholesale dispatches, registrations, exports and
+# production are NOT interchangeable. Labels here keep them distinct in the UI.
+
+version: 1
+
+# Base measure in the contract.
+metrics:
+  units:
+    display_label: Units
+    definition: Vehicle count (whole units).
+    number_format: "en-IN"        # Intl.NumberFormat locale for exact integers
+
+# Measurement basis keyed by source. UI reads the basis for a table from its (single)
+# source and shows the matching label. The one-source-per-table rule guarantees a table
+# has exactly one basis.
+measurement_basis:
+  SIAM:
+    key: wholesale_dispatches
+    display_label: Wholesale dispatches
+    definition: Manufacturer dispatches to dealers (SIAM). Not retail registrations.
+  VAHAN:
+    key: registrations
+    display_label: Registrations
+    definition: Vehicle registrations recorded on VAHAN. Not manufacturer dispatches.
+  BROKER:
+    key: broker_estimate
+    display_label: Broker estimate
+    definition: Third-party broker estimate. Basis varies; treat as indicative.
+  MANUAL:
+    key: manual_entry
+    display_label: Manual entry
+    definition: Manually maintained figure (e.g. the legacy summary workbook).
+
+# Flow display labels (the contract `flow` enum -> human text).
+flow_labels:
+  domestic: Domestic sales
+  export: Exports
+  production: Production
+  total: Total (domestic + exports)
+
+# Powertrain display labels. ICE is derived (all - ev); never summed with the others.
+powertrain_labels:
+  all: All powertrains
+  ev: Electric (EV)
+  ice: Internal combustion (ICE)
+
+# Share caveat — mirrors contract SIAM_UNIVERSE_LABEL. Kept here too so the UI never
+# hardcodes it; the canonical machine string is in pipeline/contract/constants.py.
+share_caveat: "Share shown within reported SIAM universe."

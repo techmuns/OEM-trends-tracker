@@ -1,0 +1,97 @@
+# Company alias -> canonical resolver.
+#
+# Seeded with REAL Two-Wheeler names as they appear in the source workbook
+# (`Auto_Database__Summary__-_Spark.xlsx`, sheet "OEM - Summary - 2W, PV, 3W"). No guessed
+# names. Note the genuine alias variance the raw data contains — this is exactly why every
+# row keeps both `company_raw` and `company_canonical`:
+#   - "Bajaj Auto Ltd" (ICE blocks) vs "Bajaj Auto" (EV block)
+#   - "Honda Motorcycle & Scooter India (Pvt) Ltd" vs "...India Pvt Ltd" (EV block, no parens)
+#   - "India Kawasaki MotorsPrivate Ltd" (missing space — source typo)
+#
+# v1 scope is 2W only, but the FORMAT generalises to every category without a rewrite:
+# add PV/3W/Tractor/CV makers under the same structure. `category` on a row is a
+# dimension, never inferred from this file.
+#
+# Reminder (encode, don't design around): Ola Electric is a major e-2W maker that is
+# ABSENT from this SIAM-based workbook. That absence is the concrete reason share is
+# always labelled "Share within reported SIAM universe", never plain "market share".
+
+version: 1
+
+companies:
+  - canonical: Ather Energy
+    category_hint: 2W
+    aliases:
+      - Ather Energy Pvt. Ltd
+
+  - canonical: Bajaj Auto
+    category_hint: 2W
+    aliases:
+      - Bajaj Auto Ltd
+      - Bajaj Auto           # EV-block spelling
+
+  - canonical: Hero MotoCorp
+    category_hint: 2W
+    aliases:
+      - Hero MotoCorp Ltd
+
+  - canonical: Honda Motorcycle & Scooter India
+    category_hint: 2W
+    aliases:
+      - Honda Motorcycle & Scooter India (Pvt) Ltd
+      - Honda Motorcycle & Scooter India Pvt Ltd   # EV-block spelling (no parens)
+
+  - canonical: India Yamaha Motor
+    category_hint: 2W
+    aliases:
+      - India Yamaha Motor Pvt Ltd
+
+  - canonical: Mahindra Two Wheelers
+    category_hint: 2W
+    aliases:
+      - Mahindra Two Wheelers Ltd
+
+  - canonical: Okinawa Autotech
+    category_hint: 2W
+    aliases:
+      - Okinawa Autotech Pvt. Ltd
+
+  - canonical: Piaggio Vehicles
+    category_hint: 2W
+    aliases:
+      - Piaggio Vehicles Pvt Ltd
+
+  - canonical: Suzuki Motorcycle India
+    category_hint: 2W
+    aliases:
+      - Suzuki Motorcycle India Pvt Ltd
+
+  - canonical: TVS Motor Company
+    category_hint: 2W
+    aliases:
+      - TVS Motor Company Ltd
+
+  - canonical: Harley-Davidson India
+    category_hint: 2W
+    aliases:
+      - H-D Motor Company India Pvt Ltd
+
+  - canonical: India Kawasaki Motors
+    category_hint: 2W
+    aliases:
+      - India Kawasaki MotorsPrivate Ltd   # source typo: missing space before "Private"
+
+  - canonical: Royal Enfield
+    category_hint: 2W
+    aliases:
+      - Royal Enfield (Unit of Eicher Ltd)
+
+  - canonical: Triumph Motorcycles India
+    category_hint: 2W
+    aliases:
+      - Triumph Motorcycles (India) Pvt Ltd
+
+  - canonical: UM Lohia Two Wheelers
+    category_hint: 2W
+    aliases:
+      - UM Lohia Two Wheelers Pvt Ltd

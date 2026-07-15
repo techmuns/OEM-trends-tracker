@@ -1,0 +1,15 @@
+# Cloudflare Pages configuration.
+#
+# The dashboard is a static site (no server). The pipeline commits data; Cloudflare Pages
+# builds and serves it, and auto-deploys on every push to `main`.
+#
+# Dashboard settings (Workers & Pages -> your project -> Settings -> Build):
+#   Build command:            bash scripts/build-site.sh
+#   Build output directory:   dist
+#   Root directory:           /
+# These mirror `pages_build_output_dir` below; set them in the dashboard too so the first
+# connect works. See README.md for the full one-time setup, including Cloudflare Access.
+
+name = "oem-tracker"
+compatibility_date = "2026-07-01"
+pages_build_output_dir = "dist"

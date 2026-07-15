@@ -1,0 +1,34 @@
+# Segment alias -> canonical, grouped by category.
+#
+# 2W segment labels are the REAL strings from the workbook, including the exact spelling
+# "Motor cycles" (with a space) — the parser must match it literally, so it is the
+# canonical form here rather than a normalised "Motorcycle".
+#
+# PV / CV entries below are the structural labels observed in the two source workbooks
+# (File 1 PV section: "PC"/"UV"/"Van"; File 2 splits CV into "MHCV"/"LCV"). They are
+# recorded so the contract is proven to hold them; v1 pipeline scope remains 2W.
+
+version: 1
+
+segments:
+  "2W":
+    - canonical: Scooter
+      aliases: [Scooter]
+    - canonical: Motor cycles
+      aliases: [Motor cycles, Motorcycle, Motorcycles]
+    - canonical: Mopeds
+      aliases: [Mopeds, Moped]
+
+  PV:
+    - canonical: PC          # Passenger Cars
+      aliases: [PC, Domestic PC, Passenger Car]
+    - canonical: UV          # Utility Vehicles
+      aliases: [UV, Domestic UV, Utility Vehicle]
+    - canonical: Van
+      aliases: [Van, Vans]
+
+  CV:
+    - canonical: MHCV        # Medium & Heavy Commercial Vehicles
+      aliases: [MHCV, M&HCV]
+    - canonical: LCV         # Light Commercial Vehicles
+      aliases: [LCV]
