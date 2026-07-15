@@ -20,6 +20,7 @@ export function ComparisonTable({
   selected,
   expanded,
   onSelect,
+  onHover,
 }: {
   rows: TableRow[];
   total: TableRow | null;
@@ -29,14 +30,22 @@ export function ComparisonTable({
   selected?: string;
   expanded?: boolean;
   onSelect: (company: string) => void;
+  onHover?: (company: string | null) => void;
 }) {
   const showPrior = mode !== "yoy";
   const showYoY = mode !== "absolute";
   const showChg = mode !== "absolute";
+  const interactive = !!onHover;
 
   const render = (r: TableRow, isTotal = false) => (
-    <tr key={r.company} className={isTotal ? "total" : selected === r.company ? "sel" : undefined}>
-      <td className="oem" onClick={() => !isTotal && onSelect(r.company)}>
+    <tr
+      key={r.company}
+      className={isTotal ? "total" : selected === r.company ? "sel" : undefined}
+      onClick={() => !isTotal && onSelect(r.company)}
+      onMouseEnter={interactive && !isTotal ? () => onHover!(r.company) : undefined}
+      onMouseLeave={interactive ? () => onHover!(null) : undefined}
+    >
+      <td className="oem">
         {selected === r.company && !isTotal ? <span className="oem-star">★</span> : ""}
         {isTotal ? "TOTAL / REPORTED UNIVERSE" : shortName(r.company)}{" "}
         {r.revised && <RevisedBadge />}
@@ -60,7 +69,7 @@ export function ComparisonTable({
   );
 
   return (
-    <div className={`tbl-wrap ${expanded ? "expanded" : ""}`}>
+    <div className={`tbl-wrap ${expanded ? "expanded" : ""} ${interactive ? "interactive" : ""}`}>
       <table>
         <thead>
           <tr>

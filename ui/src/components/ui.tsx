@@ -5,6 +5,7 @@ import { arrow, direction, type Direction } from "../lib/format";
 export function WidgetCard(props: {
   title: string;
   subtitle?: string;
+  info?: string;
   right?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
@@ -14,7 +15,14 @@ export function WidgetCard(props: {
     <section className={`card ${props.className ?? ""}`}>
       <div className="card-h">
         <div>
-          <h3>{props.title}</h3>
+          <h3>
+            {props.title}
+            {props.info && (
+              <span className="info" title={props.info}>
+                i
+              </span>
+            )}
+          </h3>
           {props.subtitle && <div className="sub">{props.subtitle}</div>}
         </div>
         {props.right}

@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useBundle, useManifest } from "./lib/useBundle";
 import { useHostContext, useSnapshotMode } from "./lib/host";
 import type { CategoryInfo, Flow, Period, PeriodType, Point, Powertrain, ViewModel } from "./lib/types";
-import { buildTable, getSeries, priorKey, seriesPoints, type TableRow } from "./lib/view";
+import { buildTable, getSeries, priorKey, type TableRow } from "./lib/view";
 import { fmtPct, fmtPp, fmtShare, fmtUnits, fmtUnitsCompact, monthYear, shortName } from "./lib/format";
 import { ComparisonTable, type DisplayMode } from "./components/ComparisonTable";
-import { TrendChart, type ChartSeries } from "./components/TrendChart";
+import { TrendChart } from "./components/TrendChart";
+import { ShareTrendChart, type TrendLine, type TrendPoint } from "./components/ShareTrendChart";
 import {
   Delta,
   deltaDir,
@@ -27,13 +28,12 @@ import {
 
 type Tab = "sales" | "ev" | "prod";
 
-// Series colours — champagne gold for the focus line, cream at reduced opacity for
-// comparison lines (design.md §4/§8.2). Green/red are reserved for deltas only.
+// Series colours — champagne gold for the focus line; green/red reserved for deltas only.
 const GOLD = "#c8ad86";
-const CREAM_60 = "rgba(255,247,221,0.58)";
-const CREAM_34 = "rgba(255,247,221,0.34)";
 const ICE = "#66635f";
-const CMP_COLORS = [GOLD, CREAM_60, CREAM_34];
+// Distinct default line colours by rank (design refinement): rank 1 champagne gold,
+// rank 2 warm cream-grey, rank 3 muted steel-grey — deliberately different hues.
+const RANK_COLORS = ["#c8ad86", "#b3a790", "#8794a3"];
 
 export function App() {
   const manifest = useManifest();
@@ -388,29 +388,32 @@ function yoyNode(p?: Point) {
   return <Delta text={`${fmtPct(p.yoy)} YoY`} dir={deltaDir(p.yoy)} />;
 }
 
-// build a share-trend chart series list for the selected OEM, or the top OEMs when All.
-function shareTrend(
+// Build enriched share-trend lines: for each OEM, share plus pp-change vs previous period
+// and vs the same period last year, over the visible window. `baseNames` fixes rank colours;
+// extra names (e.g. a table-row hover outside the top 3) render as an added focusable line.
+function buildTrendLines(
   view: ViewModel,
-  rows: { company: string }[],
-  oem: string,
-  totalLabel: string,
+  names: string[],
+  baseNames: string[],
   pt: PeriodType,
-  trendAxis: Period[],
-): { series: ChartSeries[]; multi: boolean } {
-  const toPoints = (company: string) =>
-    seriesPoints(getSeries(view, company, "domestic", "all", pt), trendAxis).map((x) => ({
-      label: x.label,
-      value: x.point?.share ?? null,
-    }));
-
-  if (oem) return { series: [{ name: shortName(oem), color: GOLD, points: toPoints(oem) }], multi: false };
-
-  // All OEMs → top-3 by current sales (design.md: "show major OEM share trends").
-  const top = rows.filter((r) => r.company !== totalLabel).slice(0, 3);
-  return {
-    series: top.map((r, i) => ({ name: shortName(r.company), color: CMP_COLORS[i] ?? CREAM_34, points: toPoints(r.company) })),
-    multi: true,
-  };
+  winAxis: Period[],
+  fullAxis: Period[],
+): TrendLine[] {
+  return names.map((name) => {
+    const rank = baseNames.indexOf(name);
+    const color = rank >= 0 ? RANK_COLORS[rank] ?? "#8794a3" : "#8794a3";
+    const s = getSeries(view, name, "domestic", "all", pt);
+    const points: TrendPoint[] = winAxis.map((p) => {
+      const fi = fullAxis.findIndex((a) => a.key === p.key);
+      const cur = s?.points[p.key];
+      const prev = fi > 0 ? s?.points[fullAxis[fi - 1].key] : undefined;
+      const value = cur?.share ?? null;
+      const prevChg = value != null && prev?.share != null ? value - prev.share : null;
+      const yoyChg = cur?.chg ?? null; // precomputed YoY share change (pp) from the view-model
+      return { label: p.label, value, prevChg, yoyChg };
+    });
+    return { name, display: shortName(name), color, points };
+  });
 }
 
 function trendWindow(pt: PeriodType, idx: number): number {
@@ -443,6 +446,7 @@ function SalesTab({
 }) {
   const [details, setDetails] = useState(false);
   const [rangeIdx, setRangeIdx] = useState(1);
+  const [hoverOem, setHoverOem] = useState<string | null>(null);
   const axis = view.periods[pt];
   const TOTAL = view.meta.industry_total_label;
   const key = period.key;
@@ -458,9 +462,28 @@ function SalesTab({
   );
 
   const win = trendWindow(pt, rangeIdx);
-  const trendAxis = axis.slice(-Math.min(axis.length, win));
-  const { series: trendSeries, multi } = shareTrend(view, rows, oem, TOTAL, pt, trendAxis);
-  const hasTrend = trendSeries.some((s) => s.points.some((p) => p.value !== null));
+  const winAxis = axis.slice(-Math.min(axis.length, win));
+  const top3 = rows.slice(0, 3).map((r) => r.company);
+  const baseNames = oem ? [oem] : top3;
+  const extra = hoverOem && !baseNames.includes(hoverOem) ? [hoverOem] : [];
+  const trendLines = buildTrendLines(view, [...baseNames, ...extra], baseNames, pt, winAxis, axis);
+  const hasTrend = trendLines.some((l) => l.points.some((p) => p.value !== null));
+
+  // summary for the single locked OEM: starting share, latest share, total change (pp)
+  let summary: { start: number; latest: number; total: number } | null = null;
+  if (oem) {
+    const l = trendLines.find((x) => x.name === oem);
+    const first = l?.points.find((p) => p.value != null)?.value ?? null;
+    let last: number | null = null;
+    for (let i = (l?.points.length ?? 0) - 1; i >= 0; i--) {
+      const v = l!.points[i].value;
+      if (v != null) {
+        last = v;
+        break;
+      }
+    }
+    if (first != null && last != null) summary = { start: first, latest: last, total: last - first };
+  }
 
   // insights from precomputed rows
   const eligible = rows.filter((r) => r.chg !== null || r.yoy !== null);
@@ -479,26 +502,55 @@ function SalesTab({
   const trendCard = (
     <WidgetCard
       title={`Market Share Trend — ${oem ? shortName(oem) : "Top OEMs"}`}
+      info="Market share is calculated within the reported SIAM wholesale-dispatch universe. It may not represent the complete retail market."
+      subtitle="How each OEM's share within the reported SIAM universe has changed over time."
       right={
-        <div className="seg mini" role="group" aria-label="Trend range">
-          {rangeLabels(pt).map((lbl, i) => (
-            <button key={lbl} className={rangeIdx === i ? "active" : ""} onClick={() => setRangeIdx(i)}>
-              {lbl}
+        <div className="card-h-actions">
+          {oem && (
+            <button className="btn" onClick={() => setOem("")} title="Return to the Top OEMs view">
+              Reset
             </button>
-          ))}
+          )}
+          <div className="seg mini" role="group" aria-label="Trend range">
+            {rangeLabels(pt).map((lbl, i) => (
+              <button key={lbl} className={rangeIdx === i ? "active" : ""} onClick={() => setRangeIdx(i)}>
+                {lbl}
+              </button>
+            ))}
+          </div>
         </div>
       }
-      footer="Share within reported SIAM universe · wholesale dispatches"
+      footer="Source: SIAM wholesale dispatches"
     >
       {hasTrend ? (
         <>
-          <TrendChart series={trendSeries} yFormat={(n) => (n * 100).toFixed(0) + "%"} ariaLabel="market share trend" />
-          {multi && <div className="chart-hint" style={{ padding: "8px 0 0" }}>Click an OEM row to focus its share trend.</div>}
+          <ShareTrendChart
+            lines={trendLines}
+            focusName={hoverOem}
+            lockedName={oem || null}
+            showYoY={pt !== "year"}
+            onLock={(name) => setOem(name)}
+          />
+          {oem && summary && (
+            <div className="trend-summary">
+              <span>
+                <em>Start</em> {fmtShare(summary.start)}
+              </span>
+              <span>
+                <em>Latest</em> {fmtShare(summary.latest)}
+              </span>
+              <span>
+                <em>Total change</em>{" "}
+                <span className={summary.total > 0.0005 ? "pos" : summary.total < -0.0005 ? "neg" : "flat"}>
+                  {fmtPp(summary.total)}
+                </span>
+              </span>
+            </div>
+          )}
+          <div className="trend-hint">Hover to inspect a period · Click an OEM to lock focus.</div>
         </>
-      ) : oem ? (
-        <Empty />
       ) : (
-        <div className="chart-hint">Select an OEM to trace its market-share trend, or the top three are shown by default.</div>
+        <div className="chart-hint">No share history is available for the current selection.</div>
       )}
     </WidgetCard>
   );
@@ -604,7 +656,8 @@ function SalesTab({
               mode={mode}
               selected={oem}
               expanded={details}
-              onSelect={(c) => setOem(c === oem ? "" : c)}
+              onSelect={(c) => setOem(c)}
+              onHover={setHoverOem}
             />
           ) : (
             <Empty onReset={() => setOem("")} />
