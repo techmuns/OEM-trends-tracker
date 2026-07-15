@@ -187,7 +187,14 @@ function Dashboard({
   return (
     <div className={`shell ${snapshot ? "snapshot" : ""}`}>
       <header className="zone1">
-        <span className="title">OEM Tracker</span>
+        <button
+          className="title as-home"
+          onClick={compare.goHome}
+          title="Back to dashboard home"
+          aria-label="OEM Tracker — back to home"
+        >
+          OEM Tracker
+        </button>
         <div className="header-right">
           {host.selectedTicker && (
             <span className="ticker-pill" title="From host ticker">

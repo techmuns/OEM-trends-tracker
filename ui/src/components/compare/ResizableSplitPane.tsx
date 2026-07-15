@@ -54,8 +54,10 @@ export function ResizableSplitPane({
   const showSplit = open && !expanded;
 
   return (
+    // `expanded` only styles anything while the workspace is open — otherwise a collapsed
+    // panel would hide the analysis pane and leave a blank screen (nothing to render).
     <div
-      className={`cmp-split ${open ? "open" : "closed"} ${expanded ? "expanded" : ""}`}
+      className={`cmp-split ${open ? "open" : "closed"} ${open && expanded ? "expanded" : ""}`}
       ref={ref}
       style={{ ["--cmp-ratio"]: ratio } as React.CSSProperties}
     >

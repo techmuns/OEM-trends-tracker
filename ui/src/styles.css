@@ -1282,6 +1282,118 @@ body.cmp-resizing .cmp-divider-grip {
   color: var(--negative);
 }
 
+/* --- OEM Tracker title as a home button --- */
+button.title.as-home {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: inherit;
+  transition: color 140ms ease;
+}
+button.title.as-home:hover,
+button.title.as-home:focus-visible {
+  color: var(--accent);
+}
+
+/* --- saved chart slots --- */
+.cmp-slots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 16px 0;
+}
+.cmp-slot {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  overflow: hidden;
+}
+.cmp-slot.on {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+.cmp-slot-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.cmp-slot.on .cmp-slot-tab {
+  color: var(--accent);
+  font-weight: 500;
+}
+.cmp-slot-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--pill);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.cmp-slot.on .cmp-slot-count {
+  background: var(--accent-strong);
+  color: var(--canvas);
+}
+.cmp-slot-x {
+  height: 26px;
+  padding: 0 7px 0 1px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.cmp-slot-x:hover {
+  color: var(--negative);
+}
+.cmp-slot-new {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+.cmp-slot-new:hover {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+.cmp-slot-input {
+  height: 26px;
+  width: 100px;
+  padding: 0 8px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+}
+
 /* --- empty drop zone --- */
 .cmp-empty {
   flex: 1;

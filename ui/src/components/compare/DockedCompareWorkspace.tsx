@@ -3,6 +3,7 @@
 // views, and the source drawer. It is self-contained — it renders entirely from the captured
 // series snapshots, so it keeps working across page and category switches.
 
+import { useState } from "react";
 import type { PeriodType } from "../../lib/types";
 import {
   commonFrequencies,
@@ -10,7 +11,7 @@ import {
   FOCUS_COLOR,
   SERIES_COLORS,
 } from "../../lib/compare";
-import { useCompare, type ViewMode } from "../../lib/useCompare";
+import { MAX_CHARTS, useCompare, type ChartMeta, type ViewMode } from "../../lib/useCompare";
 import { ComparisonSeriesChip } from "./ComparisonSeriesChip";
 import { CompareChart } from "./CompareChart";
 import { CompareTable } from "./CompareTable";
@@ -18,6 +19,69 @@ import { CompareDropZone } from "./CompareDropZone";
 import { CompareSourceDrawer } from "./CompareSourceDrawer";
 
 const FREQ_LABEL: Record<PeriodType, string> = { month: "Monthly", quarter: "Quarterly", year: "Yearly" };
+
+// A saved-chart tab: click to switch, double-click the name to rename, × to remove.
+function SlotTab({
+  meta,
+  active,
+  canRemove,
+  onSelect,
+  onRemove,
+  onRename,
+}: {
+  meta: ChartMeta;
+  active: boolean;
+  canRemove: boolean;
+  onSelect: () => void;
+  onRemove: () => void;
+  onRename: (name: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(meta.name);
+  const commit = () => {
+    setEditing(false);
+    if (val.trim() && val.trim() !== meta.name) onRename(val.trim());
+    else setVal(meta.name);
+  };
+  return (
+    <div className={`cmp-slot ${active ? "on" : ""}`}>
+      {editing ? (
+        <input
+          className="cmp-slot-input"
+          value={val}
+          autoFocus
+          maxLength={24}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") {
+              setVal(meta.name);
+              setEditing(false);
+            }
+          }}
+        />
+      ) : (
+        <button
+          className="cmp-slot-tab"
+          role="tab"
+          aria-selected={active}
+          onClick={onSelect}
+          onDoubleClick={() => setEditing(true)}
+          title={`${meta.name} — click to open, double-click to rename`}
+        >
+          {meta.name}
+          <span className="cmp-slot-count">{meta.count}</span>
+        </button>
+      )}
+      {canRemove && !editing && (
+        <button className="cmp-slot-x" onClick={onRemove} title={`Remove ${meta.name}`} aria-label={`Remove ${meta.name}`}>
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function DockedCompareWorkspace() {
   const c = useCompare();
@@ -75,6 +139,25 @@ export function DockedCompareWorkspace() {
           </button>
         </div>
       </header>
+
+      <div className="cmp-slots" role="tablist" aria-label="Comparison charts">
+        {c.charts.map((ch) => (
+          <SlotTab
+            key={ch.id}
+            meta={ch}
+            active={ch.id === c.activeId}
+            canRemove={c.charts.length > 1}
+            onSelect={() => c.selectChart(ch.id)}
+            onRemove={() => c.removeChart(ch.id)}
+            onRename={(name) => c.renameChart(ch.id, name)}
+          />
+        ))}
+        {c.charts.length < MAX_CHARTS && (
+          <button className="cmp-slot-new" onClick={() => c.newChart()} title="Save this chart and start a second one">
+            + New chart
+          </button>
+        )}
+      </div>
 
       {c.notice && <div className={`cmp-notice ${c.notice.tone}`}>{c.notice.text}</div>}
 
