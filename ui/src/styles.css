@@ -193,16 +193,28 @@ select,
 }
 select {
   appearance: none;
+  color-scheme: dark;
   padding-right: 26px;
   background-image: var(--select-arrow);
   background-repeat: no-repeat;
   background-position: right 9px center;
 }
-/* secondary controls: soft blue hover (copper is reserved for active/emphasis) */
+/* native dropdown list — force an on-theme dark popup (option rendering ignores var(),
+   so use literal token values here) instead of falling back to a white OS list */
+select option {
+  background-color: #0d1520; /* --surface-2 */
+  color: #f4f6f8; /* --text-primary */
+}
+select option:checked,
+select option:hover {
+  background-color: #101a27; /* --surface-hover */
+  color: #c68a52; /* --accent (copper) */
+}
+/* secondary controls: soft blue hover (background-color only, to keep the select arrow) */
 select:hover,
 .btn:hover {
   border-color: var(--border-strong);
-  background: var(--blue-tint);
+  background-color: var(--surface-hover);
   color: var(--text-primary);
 }
 select:disabled {
