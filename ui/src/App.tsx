@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useBundle } from "./lib/useBundle";
+import { useBundle, useManifest } from "./lib/useBundle";
 import { useHostContext, useSnapshotMode } from "./lib/host";
-import type { Flow, Period, PeriodType, Point, Powertrain, ViewModel } from "./lib/types";
+import type { CategoryInfo, Flow, Period, PeriodType, Point, Powertrain, ViewModel } from "./lib/types";
 import { buildTable, getSeries, priorKey, seriesPoints } from "./lib/view";
 import { fmtPct, fmtPp, fmtShare, fmtUnitsCompact, monthYear } from "./lib/format";
 import { ComparisonTable, type DisplayMode } from "./components/ComparisonTable";
@@ -23,20 +23,72 @@ const ICE_GREY = "#6b7280";
 const PRIMARY = "#4f46e5";
 
 export function App() {
-  const load = useBundle();
-  if (load.status === "loading")
+  const manifest = useManifest();
+  if (manifest.status === "loading")
     return (
       <Shell>
         <Loading rows={6} />
       </Shell>
     );
-  if (load.status === "error")
+  if (manifest.status === "error")
     return (
       <Shell>
         <ErrorState onRetry={() => location.reload()} />
       </Shell>
     );
-  return <Dashboard view={load.data} />;
+  return <CategorizedApp categories={manifest.data.categories} />;
+}
+
+// Owns the selected category, fetches that category's view-model, and keeps the category
+// switch visible (in the header) even while a view is loading or errored.
+function CategorizedApp({ categories }: { categories: CategoryInfo[] }) {
+  const [cat, setCat] = useQuery("cat", categories[0]?.key ?? "2W");
+  const active = categories.find((c) => c.key === cat) ?? categories[0];
+  const load = useBundle(active?.key ?? "2W");
+  const picker = (
+    <CategorySelect categories={categories} value={active?.key ?? ""} onChange={setCat} />
+  );
+  if (load.status === "loading")
+    return (
+      <Shell right={picker}>
+        <Loading rows={6} />
+      </Shell>
+    );
+  if (load.status === "error")
+    return (
+      <Shell right={picker}>
+        <ErrorState onRetry={() => location.reload()} />
+      </Shell>
+    );
+  return (
+    <Dashboard view={load.data} categories={categories} cat={active.key} setCat={setCat} />
+  );
+}
+
+function CategorySelect({
+  categories,
+  value,
+  onChange,
+}: {
+  categories: CategoryInfo[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      title="Vehicle category"
+      aria-label="Vehicle category"
+      disabled={categories.length <= 1}
+    >
+      {categories.map((c) => (
+        <option key={c.key} value={c.key}>
+          {c.label}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 function Shell({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
@@ -63,7 +115,17 @@ function useQuery<T extends string>(key: string, def: T): [T, (v: T) => void] {
   return [val, setVal];
 }
 
-function Dashboard({ view }: { view: ViewModel }) {
+function Dashboard({
+  view,
+  categories,
+  cat,
+  setCat,
+}: {
+  view: ViewModel;
+  categories: CategoryInfo[];
+  cat: string;
+  setCat: (v: string) => void;
+}) {
   const host = useHostContext();
   const snapshot = useSnapshotMode();
   const [tab, setTab] = useQuery<Tab>("tab", "sales");
@@ -93,9 +155,7 @@ function Dashboard({ view }: { view: ViewModel }) {
               {host.oem ? ` · ${host.oem}` : ""}
             </span>
           )}
-          <select value="2W" disabled title="Category (2W only in this release)">
-            <option>Two-Wheelers</option>
-          </select>
+          <CategorySelect categories={categories} value={cat} onChange={setCat} />
           <OemSelect view={view} value={oem} onChange={setOem} />
           <div className="seg">
             {(["month", "quarter", "year"] as PeriodType[]).map((k) => (
@@ -133,9 +193,11 @@ function Dashboard({ view }: { view: ViewModel }) {
             📅 Data as of <b>{monthYear(latest)}</b>
           </span>
           <span className="sub">
-            Coverage {monthYear(view.meta.coverage_start)} – {monthYear(latest)}. Maker-level
-            sales/exports/production to {monthYear(latest)}; EV &amp; segment detail through{" "}
-            {evLatest ? monthYear(evLatest) : "—"}.
+            {view.meta.category_label}. Coverage {monthYear(view.meta.coverage_start)} –{" "}
+            {monthYear(latest)}. Maker-level sales &amp; exports to {monthYear(latest)}
+            {view.meta.has_ev
+              ? `; EV & segment detail through ${evLatest ? monthYear(evLatest) : "—"}.`
+              : "; EV is reported inline among makers in this category, so EV volume is not broken out."}
           </span>
         </div>
 
@@ -301,7 +363,12 @@ function SalesTab({
           value={oem ? fmtShare(sel?.share) : "100.0%"}
           cmp={oem ? undefined : <span className="flat">reported universe</span>}
           scope={oem || "All OEMs"}
-          caveat={view.meta.share_caveat + ". Some pure-EV makers (e.g. Ola) are not SIAM members, so EV share is understated."}
+          caveat={
+            view.meta.share_caveat +
+            (view.meta.has_ev
+              ? ". Some pure-EV makers (e.g. Ola) are not SIAM members, so EV share is understated."
+              : ".")
+          }
         />
         <Kpi
           label="Share Change (pp)"
@@ -389,6 +456,25 @@ function Insight({
 
 // --- EV vs ICE ---
 function EvTab({ view, pt, period }: { view: ViewModel; pt: PeriodType; period: Period }) {
+  // For PV/3W/CV the source has no EV block — EV-only makers sit inline among ICE makers,
+  // so EV volume is NOT derivable. We render it unavailable rather than a wrong number.
+  if (!view.meta.has_ev) {
+    const makers = view.meta.ev_only_makers;
+    return (
+      <Unavailable title={`EV split not available for ${view.meta.category_label.toLowerCase()}`}>
+        {view.meta.source} reports {view.meta.category_label.toLowerCase()} without an EV/ICE
+        breakdown — EV-only makers are listed inline alongside ICE makers, so an EV volume or
+        share here would be a guess, not a measurement.
+        {makers.length > 0 && (
+          <>
+            {" "}
+            EV-only makers present in the data (counted within total sales, never summed into a
+            separate EV figure): <b>{makers.join(", ")}</b>.
+          </>
+        )}
+      </Unavailable>
+    );
+  }
   const axis = view.periods[pt];
   const TOTAL = view.meta.industry_total_label;
   const evLatest = view.meta.ev_latest_period;
@@ -503,16 +589,20 @@ function ProdTab({
 }) {
   const axis = view.periods[pt];
   const TOTAL = view.meta.industry_total_label;
+  const catShort = view.meta.category; // "2W" | "PV" | ...
   const key = period.key;
   const priorL = labelFor(axis, priorKey(pt, key));
   const expInd = pick(view, TOTAL, "export", "all", pt, key);
 
   const exp = buildTable(view, { flow: "export", powertrain: "all", periodType: pt, periodKey: key, totalLabel: TOTAL });
 
-  // production exists only from File 2 (2026-01+). Pick the latest period that has data.
+  // production exists only where the source reports it (2W: File 2, 2026-01+). Pick the
+  // latest period that has data; categories with no production flow show it unavailable.
   const prodFirst = view.meta.production_first_period;
   const prodAxis = axis.filter((p) => !prodFirst || p.date >= prodFirst);
-  const prodPeriod = prodAxis.find((p) => p.key === key) ?? prodAxis[prodAxis.length - 1];
+  const prodPeriod = view.meta.has_production
+    ? prodAxis.find((p) => p.key === key) ?? prodAxis[prodAxis.length - 1]
+    : undefined;
   const prod = prodPeriod
     ? buildTable(view, { flow: "production", powertrain: "all", periodType: pt, periodKey: prodPeriod.key, totalLabel: TOTAL })
     : { rows: [], total: null };
@@ -528,10 +618,14 @@ function ProdTab({
         />
         <Kpi label="Export YoY" value={expInd?.yoy == null ? "—" : fmtPct(expInd.yoy)} scope={`vs ${priorL}`} />
         <Kpi
-          label="Production (2W)"
+          label={`Production (${catShort})`}
           value={prodPeriod ? fmtUnitsCompact(pick(view, TOTAL, "production", "all", pt, prodPeriod.key)?.v) : "—"}
           scope={prodPeriod ? prodPeriod.label : "unavailable"}
-          caveat="2W production is reported only from Jan-2026 (monthly SIAM). Earlier periods are not available."
+          caveat={
+            view.meta.has_production
+              ? `${catShort} production is reported only from ${prodFirst ? monthYear(prodFirst) : "recently"} (monthly SIAM). Earlier periods are not available.`
+              : `Production is not reported for ${view.meta.category_label.toLowerCase()} in this source. Exports remain available.`
+          }
         />
         <Kpi label="Export share leaders" value={exp.rows[0]?.company ?? "—"} scope={fmtShare(exp.rows[0]?.share)} />
       </div>

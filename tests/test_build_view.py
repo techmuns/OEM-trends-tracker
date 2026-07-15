@@ -84,3 +84,23 @@ def test_never_sums_across_powertrain(bundle: Bundle) -> None:
     v = _view(bundle)
     powertrains = {s["powertrain"] for s in v["series"]}
     assert powertrains <= {"all", "ev", "ice"}
+
+
+def test_pv_view_declares_ev_unavailable(real_parse_pv) -> None:
+    # EV is NOT derivable for PV: the view must say has_ev=False so the UI renders EV
+    # unavailable, and every series stays powertrain=all — never a derived ev/ice.
+    _, rows = real_parse_pv
+    v = build_view(rows, META, "PV")
+    assert v["meta"]["has_ev"] is False
+    assert v["meta"]["category"] == "PV"
+    assert {s["powertrain"] for s in v["series"]} == {"all"}
+    # EV-only makers surface as an inline list, never summed into an EV total
+    assert "Mahindra Electric Mobility" in v["meta"]["ev_only_makers"]
+    # ev_penetration carries no real numbers — every leaf is null (EV not derivable)
+    leaves = [
+        val
+        for flow in v["ev_penetration"].values()
+        for pt in flow.values()
+        for val in pt.values()
+    ]
+    assert leaves and all(val is None for val in leaves)

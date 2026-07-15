@@ -44,12 +44,21 @@ jobs:
         if: success()
         run: |
           if [ -n "$(git status --porcelain data/)" ]; then
-            # refresh the served view-model so the committed dist/ shows fresh data
-            # (UI code is unchanged, so no rebuild is needed)
-            cp data/bundle/2w.json dist/data/2w.json
+            # refresh the served view-models so the committed dist/ shows fresh data
+            # (UI code is unchanged, so no rebuild is needed): every per-category view plus
+            # the manifest, skipping the canonical bundles the UI never reads.
+            mkdir -p dist/data
+            cp data/bundle/categories.json dist/data/categories.json
+            for v in data/bundle/*.json; do
+              base=$(basename "$v")
+              case "$base" in
+                categories.json|bundle*.json) continue ;;
+              esac
+              cp "$v" "dist/data/$base"
+            done
             git config user.name "oem-tracker-bot"
             git config user.email "actions@github.com"
-            git add data/ dist/data/2w.json
+            git add data/ dist/data/
             git commit -m "ingest: automated data update [skip ci]"
             git push
           else

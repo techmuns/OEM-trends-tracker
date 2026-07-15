@@ -1,0 +1,49 @@
+# Per-category block structure — the taxonomy + terminators live here, NOT in code, because
+# every category in File 1 has a different physical layout. Each category is a separate
+# adapter that reads its config from this file.
+#
+# Fields:
+#   label               human label
+#   source              the reporting body (share denominator scope)
+#   native_frequency    month | quarter
+#   has_ev              true only where EV is a clean derivable subset (2W). For PV/3W/CV
+#                       the EV makers sit INLINE among ICE makers, so EV is NOT derivable —
+#                       the UI must render EV unavailable, never a wrong number.
+#   has_production      whether this category carries a production flow
+#   sheet               source sheet in File 1
+#   region_end          label that ends this category's region (exclusive)
+#   industry_totals     flow -> the reported industry-total row label (ingested as reported)
+#   segments            flow -> { segment-header-label: {segment, terminator} }
+#                       terminators differ per segment/flow (e.g. "PC Volumes", not "Total").
+
+version: 1
+
+categories:
+  "2W":
+    label: Two-Wheelers
+    source: SIAM
+    native_frequency: month
+    has_ev: true
+    has_production: false # 2W production is only in File 2 (added in Phase 2)
+
+  PV:
+    label: Passenger Vehicles
+    source: SIAM
+    native_frequency: month
+    has_ev: false # EV-only makers sit inline; EV volume is not derivable
+    has_production: false
+    sheet: "OEM - Summary - 2W, PV, 3W"
+    region_start: "Domestic PC"
+    region_end: "THREE WHEELERS"
+    industry_totals:
+      domestic: "Total DOMESTIC PV"
+      export: "Total EXPORT PV"
+    segments:
+      domestic:
+        "Domestic PC": { segment: PC, terminator: "PC Volumes" }
+        "Domestic UV": { segment: UV, terminator: "UV Volumes" }
+        "Vans": { segment: Van, terminator: "Total Vans" }
+      export:
+        "Passenger Cars (Export)": { segment: PC, terminator: "Total Export Passenger Cars" }
+        "Utility Vehicles (Export)": { segment: UV, terminator: "Total Export UV" }
+        "Vans (Export)": { segment: Van, terminator: "Total Export Vans" }

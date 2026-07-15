@@ -107,3 +107,81 @@ companies:
     category_hint: 2W
     aliases:
       - Others
+
+  # --- Passenger Vehicles (Phase 4) ---
+  # EV is NOT derivable for PV: EV-only makers sit inline among ICE makers, and a maker
+  # line like "Tata Motors" is all powertrains (its EVs cannot be separated). `is_ev_only`
+  # is a company attribute for display/badging only — it is NEVER summed into an EV total.
+  - canonical: Maruti Suzuki India
+    category_hint: PV
+    aliases: [Maruti Suzuki India Ltd]
+  - canonical: Hyundai Motor India
+    category_hint: PV
+    aliases: [Hyundai Motor India Ltd]
+  - canonical: Tata Motors
+    category_hint: PV
+    aliases: [Tata Motors Ltd]
+  - canonical: Mahindra & Mahindra
+    category_hint: PV
+    aliases: [Mahindra & Mahindra Ltd]
+  - canonical: Mahindra Electric Mobility
+    category_hint: PV
+    is_ev_only: true
+    aliases: [Mahindra Electric Mobility Ltd]
+  - canonical: Toyota Kirloskar Motor
+    category_hint: PV
+    aliases: [Toyota Kirloskar Motor Pvt Ltd]
+  - canonical: Honda Cars India
+    category_hint: PV
+    aliases: [Honda Cars India Ltd, Honda Siel Cars India Ltd] # Honda Siel = former name, same entity
+  - canonical: Kia Motors
+    category_hint: PV
+    aliases: [Kia Motors]
+  - canonical: MG Motor India
+    category_hint: PV
+    aliases: [MG Motor India Pvt Ltd]
+  - canonical: Renault India
+    category_hint: PV
+    aliases: [Renault India Pvt Ltd]
+  - canonical: Nissan Motor India
+    category_hint: PV
+    aliases: [Nissan Motor India Pvt Ltd]
+  - canonical: Skoda Auto India
+    category_hint: PV
+    aliases: [SkodaAuto India Pvt Ltd]
+  - canonical: Ford India
+    category_hint: PV
+    aliases: [Ford India Pvt Ltd]
+  - canonical: General Motors India
+    category_hint: PV
+    aliases: [General Motors India Pvt Ltd]
+  - canonical: Fiat India Automobiles
+    category_hint: PV
+    aliases: [Fiat India Automobiles Pvt Ltd, FIAT INDIA AUTOMOBILES Private Limited]
+  - canonical: BMW India
+    category_hint: PV
+    aliases: [BMW, BMW India]
+  - canonical: Hindustan Motors
+    category_hint: PV
+    aliases: [Hindustan Motors Ltd]
+  - canonical: Force Motors
+    category_hint: PV
+    aliases: [Force Motors Ltd]
+  - canonical: Ashok Leyland
+    category_hint: PV
+    aliases: [Ashok Leyland Ltd]
+  - canonical: International Cars & Motors
+    category_hint: PV
+    aliases: [International Cars & Motors Ltd]
+  - canonical: PCA Motors
+    category_hint: PV
+    aliases: [PCA Motors Pvt. Ltd]
+  # Volkswagen - Audi and Volkswagen India are SEPARATE reporting lines in the source and
+  # are kept separate (not merged). "Volkswagen - Audi" is an older combined VW+Audi line;
+  # "Volkswagen India" is the India entity. Merging them would double-count or mislabel.
+  - canonical: Volkswagen - Audi
+    category_hint: PV
+    aliases: [Volkswagen - Audi]
+  - canonical: Volkswagen India
+    category_hint: PV
+    aliases: [Volkswagen India Pvt Ltd]
