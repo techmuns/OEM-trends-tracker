@@ -20,7 +20,6 @@ import {
   IconBars,
   IconBolt,
   IconDoc,
-  IconExternal,
   IconFactory,
   IconGrowth,
   IconTrendDown,
@@ -622,7 +621,6 @@ function AnalyticalTab({
   rangeIdx: number;
   setRangeIdx: (v: number) => void;
 }) {
-  const [details, setDetails] = useState(false);
   const norail = pt === "year";
 
   const tableCard = (
@@ -640,9 +638,6 @@ function AnalyticalTab({
                 </button>
               ))}
             </div>
-            <button className="btn" onClick={() => setDetails((d) => !d)} title="Expand the full table">
-              {details ? "Collapse" : "View details"} <IconExternal />
-            </button>
           </div>
         )
       }
@@ -657,7 +652,6 @@ function AnalyticalTab({
           priorLabel={table.priorLabel}
           mode={mode}
           selected={oem}
-          expanded={details}
           onSelect={(c) => setOem(c)}
           onHover={setHoverOem}
           compare={table.compare}
@@ -724,14 +718,11 @@ function AnalyticalTab({
   );
 
   return (
-    <>
-      <div className={`mainrow ${details ? "details" : ""} ${norail ? "norail" : ""}`}>
-        {!norail && <PeriodRail axis={axis} pt={pt} periodKey={period.key} onChange={setPeriod} />}
-        {tableCard}
-        {!details && chartCard}
-      </div>
-      {details && <div className="row">{chartCard}</div>}
-    </>
+    <div className={`mainrow ${norail ? "norail" : ""}`}>
+      {!norail && <PeriodRail axis={axis} pt={pt} periodKey={period.key} onChange={setPeriod} />}
+      {tableCard}
+      {chartCard}
+    </div>
   );
 }
 
