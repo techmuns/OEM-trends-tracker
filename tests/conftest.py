@@ -75,6 +75,20 @@ def real_parse_3w():
 
 
 @pytest.fixture(scope="session")
+def real_parse_cv():
+    """Parse the quarterly CV sheet of the committed File 1 once. Skips if not present."""
+    if not REAL_WORKBOOK.exists():
+        pytest.skip("real workbook data/raw/Auto_Database__Summary__-_Spark.xlsx not present")
+    from pipeline.adapters.excel_cv import CvQuarterlyAdapter
+
+    adapter = CvQuarterlyAdapter(
+        REAL_WORKBOOK, ingest_date=datetime(2026, 7, 15, 9, 0, tzinfo=_IST)
+    )
+    rows = adapter.parse(adapter.fetch("4QFY26"))
+    return adapter, rows
+
+
+@pytest.fixture(scope="session")
 def schema() -> dict:
     return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
 

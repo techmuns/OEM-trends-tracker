@@ -25,6 +25,7 @@ from pathlib import Path
 import openpyxl
 
 from pipeline.adapters.base import SourceAdapter
+from pipeline.adapters.excel_cv import CvQuarterlyAdapter
 from pipeline.adapters.excel_nested import NestedBlockAdapter
 from pipeline.adapters.excel_spark import ExcelSparkAdapter
 from pipeline.adapters.siam_monthly import SiamMonthlyAdapter
@@ -54,11 +55,14 @@ def detect_adapters(path: Path, ts: datetime) -> list[tuple[str, SourceAdapter]]
     finally:
         wb.close()
     if FILE1_SHEET in sheets:
-        return [
+        adapters: list[tuple[str, SourceAdapter]] = [
             ("2W", ExcelSparkAdapter(path, ingest_date=ts)),
             ("PV", NestedBlockAdapter("PV", path, ingest_date=ts)),
             ("3W", NestedBlockAdapter("3W", path, ingest_date=ts)),
         ]
+        if "CV" in sheets:
+            adapters.append(("CV", CvQuarterlyAdapter(path, ingest_date=ts)))
+        return adapters
     if FILE2_SHEET in sheets and "Passenger Vehicle" in sheets:
         return [("2W", SiamMonthlyAdapter(path, ingest_date=ts))]
     return []
@@ -66,7 +70,7 @@ def detect_adapters(path: Path, ts: datetime) -> list[tuple[str, SourceAdapter]]
 
 def _extras(adapter: SourceAdapter) -> dict:
     extras: dict = {}
-    if isinstance(adapter, (ExcelSparkAdapter, NestedBlockAdapter)):
+    if isinstance(adapter, (ExcelSparkAdapter, NestedBlockAdapter, CvQuarterlyAdapter)):
         extras["reconciliation"] = adapter.reconciliation
     if isinstance(adapter, SiamMonthlyAdapter):
         extras["seam_reference"] = adapter.seam_reference
@@ -82,11 +86,16 @@ def _notes(category: str, live) -> str:
             "extends maker-level totals past it. EV-vs-ICE and segments end "
             f"{FILE1_LAST_PERIOD}; maker values differ up to ~18% at the seam (File 1 not superseded)."
         )
+    if category == "CV":
+        return (
+            f"Data through {latest} (CV is reported QUARTERLY, not monthly). Source: SIAM "
+            "wholesale dispatches. EV is not derivable for CV — electric-bus makers sit inline "
+            "among ICE makers, so EV volume/share is not shown."
+        )
     if category in ("PV", "3W"):
-        label = "PV" if category == "PV" else "3W"
         return (
             f"Data through {latest}. Source: SIAM wholesale dispatches. EV is not derivable "
-            f"for {label} — EV-only makers sit inline among ICE makers, so EV volume/share is "
+            f"for {category} — EV-only makers sit inline among ICE makers, so EV volume/share is "
             "not shown."
         )
     return f"Data through {latest}. Source: SIAM wholesale dispatches."

@@ -106,12 +106,14 @@ def reconcile_segment_sums(
     known = known_overshoots or set()
     sums: dict[tuple[str, str, date], float] = {}
     for r in rows:
+        # sum the reported BASE rows (month for 2W/PV/3W, quarter for CV) — never derived
+        # year rows, and never the reported industry total (which is not a maker).
         if (
             r.powertrain.value != "all"
             or r.segment is None
-            or r.period_type.value != "month"
+            or r.period_type.value == "year"
             or r.value is None
-            or r.company_canonical == INDUSTRY_TOTAL_CANONICAL  # the reported total, not a maker
+            or r.company_canonical == INDUSTRY_TOTAL_CANONICAL
         ):
             continue
         k = (r.flow.value, r.segment, r.period_date)

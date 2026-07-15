@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from pipeline.adapters.excel_cv import CvQuarterlyAdapter
 from pipeline.adapters.excel_nested import NestedBlockAdapter
 from pipeline.adapters.excel_spark import ExcelSparkAdapter
 from pipeline.adapters.siam_monthly import SiamMonthlyAdapter
@@ -24,6 +25,7 @@ def test_detects_file1_as_multi_category() -> None:
     assert isinstance(by_cat["2W"], ExcelSparkAdapter)
     assert isinstance(by_cat["PV"], NestedBlockAdapter)
     assert isinstance(by_cat["3W"], NestedBlockAdapter)
+    assert isinstance(by_cat["CV"], CvQuarterlyAdapter)
     # 2W must come first (its EV subset must be built before dependents)
     assert [c for c, _a in adapters][0] == "2W"
 

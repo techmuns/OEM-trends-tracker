@@ -209,3 +209,46 @@ companies:
     category_hint: 3W
     is_ev_only: true # Pinnacle (Ecodryft) — EV 3W only
     aliases: [Pinnacle Mobility Solutions Pvt Ltd]
+
+  # --- Commercial Vehicles (Phase 4) ---
+  # Quarterly-reported. EV is NOT derivable (same rule): pure-EV CV makers (electric-bus
+  # builders — Olectra, PMI, Switch, JBM — and Pinnacle/TI Clean) sit inline and are flagged
+  # is_ev_only for display only. Ashok Leyland, Tata, M&M, Force Motors, Maruti, Toyota
+  # Kirloskar, Piaggio, Hindustan Motors, Pinnacle and TI Clean reuse existing canonicals.
+  - canonical: AMW Motors
+    category_hint: CV
+    aliases: [AMW Motors Ltd]
+  - canonical: Isuzu Motors India
+    category_hint: CV
+    aliases: [Isuzu Motors India Pvt Ltd]
+  - canonical: JBM Auto
+    category_hint: CV
+    is_ev_only: true # JBM Ecolife — electric buses
+    aliases: [JBM Auto Ltd]
+  - canonical: Olectra Greentech
+    category_hint: CV
+    is_ev_only: true # pure electric buses
+    aliases: [Olectra Greentech Limited]
+  - canonical: PMI Electro Mobility
+    category_hint: CV
+    is_ev_only: true # pure electric buses
+    aliases: [PMI Electro Mobility Solutions Pvt Ltd]
+  - canonical: SML Isuzu
+    category_hint: CV
+    aliases: [SML Isuzu Ltd]
+  - canonical: Scania Commercial Vehicles India
+    category_hint: CV
+    aliases: [Scania Commercial Vehicles India Pvt Ltd]
+  - canonical: Switch Mobility
+    category_hint: CV
+    is_ev_only: true # Ashok Leyland's EV arm — pure electric CVs
+    aliases: [Switch Mobility Automotive Ltd]
+  - canonical: VECV-Eicher
+    category_hint: CV
+    aliases: [VECV-Eicher]
+  - canonical: VECV-Volvo
+    category_hint: CV
+    aliases: [VECV-Volvo]
+  - canonical: Volvo Group India
+    category_hint: CV
+    aliases: [Volvo Group India Pvt Ltd]

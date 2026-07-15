@@ -72,3 +72,27 @@ categories:
         "Goods 3W": { segment: Goods, terminator: "Goods total" }
       export:
         "Exports - Passenger 3W": { segment: Passenger, terminator: "Total Exports Passenger" }
+
+  CV:
+    label: Commercial Vehicles
+    source: SIAM
+    native_frequency: quarter # CV is reported QUARTERLY, not monthly — quarters are the base
+    has_ev: false # electric-bus makers (Olectra, PMI, Switch, JBM) sit inline
+    has_production: true # CV carries a production flow (unlike 2W/PV/3W in File 1)
+    sheet: "CV"
+    header_row: 1 # quarter labels ("1QFY20"...) live in row 1
+    # Three flow regions on one sheet, each with the same four leaf segments. Within a region
+    # the grand "Total CVs" row is the reported industry total; the intermediate subtotals
+    # ("Total M&HCVs", "Total LCVs") and the maker-rollup "... - Overall" tail are skipped so
+    # nothing is double-counted.
+    industry_total: "Total CVs"
+    skip_rows: ["Total M&HCVs", "Total LCVs"]
+    segments:
+      "M&HCV Passenger": { segment: "M&HCV Passenger", terminator: "Total M&HCV (P)" }
+      "M&HCV Goods": { segment: "M&HCV Goods", terminator: "Total M&HCV (G)" }
+      "LCV - Passenger": { segment: "LCV Passenger", terminator: "Total LCV (P)" }
+      "LCV - Goods": { segment: "LCV Goods", terminator: "Total LCV (G)" }
+    flow_regions:
+      domestic: { region_start: "Domestic Sales", region_end: "Domestic Sales - Overall" }
+      export: { region_start: "Exports", region_end: "Export Sales - Overall" }
+      production: { region_start: "Production" } # last region — parse runs to the end

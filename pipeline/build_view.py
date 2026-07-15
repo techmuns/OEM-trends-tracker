@@ -75,7 +75,15 @@ def build_view(rows: Sequence[ContractRow], meta_src: dict, category: str = "2W"
     rows = [r for r in rows if r.category.value == category]
     if not rows:
         raise ValueError(f"no rows for category {category}")
-    current = [r for r in rows if not r.is_superseded and r.period_type.value == MONTH]
+    cat_cfg = load_categories().get(category, {})
+    # Base frequency: 2W/PV/3W report monthly (quarter/year derived); CV reports quarterly
+    # (quarter is the reported base, year derived from 4 quarters, no month level).
+    base_pt = cat_cfg.get("native_frequency", MONTH)
+    if base_pt == MONTH:
+        pt_specs = [(MONTH, 1), (QUARTER, 3), (YEAR, 12)]
+    else:  # quarter-native
+        pt_specs = [(QUARTER, 1), (YEAR, 4)]
+    current = [r for r in rows if not r.is_superseded and r.period_type.value == base_pt]
     # revised at maker grain: any superseded row for this (company, flow, powertrain, month)
     revised = {
         (r.company_canonical, r.flow.value, r.powertrain.value, r.period_date)
@@ -131,8 +139,7 @@ def build_view(rows: Sequence[ContractRow], meta_src: dict, category: str = "2W"
     out_series = []
     for (c, f, p), monthly in mm.items():
         industry = mm.get((INDUSTRY_TOTAL_CANONICAL, f, p), {}) if p in ("all", "ev") else {}
-        for pt in (MONTH, QUARTER, YEAR):
-            expected = 1 if pt == MONTH else (3 if pt == QUARTER else 12)
+        for pt, expected in pt_specs:
             pdata: dict[str, dict] = {}
             for key, dates in group_periods(monthly, pt).items():
                 dates.sort()
@@ -165,7 +172,7 @@ def build_view(rows: Sequence[ContractRow], meta_src: dict, category: str = "2W"
         ind_all = mm.get((INDUSTRY_TOTAL_CANONICAL, f, "all"), {})
         ind_ev = mm.get((INDUSTRY_TOTAL_CANONICAL, f, "ev"), {})
         ev_penetration[f] = {}
-        for pt in (MONTH, QUARTER, YEAR):
+        for pt in [p for p, _ in pt_specs]:
             m: dict[str, float | None] = {}
             for key, dates in group_periods(ind_all, pt).items():
                 a = sum(ind_all[d] for d in dates)
@@ -173,7 +180,8 @@ def build_view(rows: Sequence[ContractRow], meta_src: dict, category: str = "2W"
                 m[key] = (e / a) if (e is not None and a) else None
             ev_penetration[f][pt] = m
 
-    # 6) period axes (labels, sorted)
+    # 6) period axes (labels, sorted). all_dates are base-period start dates (months for
+    #    2W/PV/3W, quarter-starts for CV); the month axis is empty for a quarter-native cat.
     all_months = sorted({d for m in mm.values() for d in m})
     periods = {
         MONTH: [
@@ -185,7 +193,9 @@ def build_view(rows: Sequence[ContractRow], meta_src: dict, category: str = "2W"
                 "fiscal_quarter": _fq(d),
             }
             for d in all_months
-        ],
+        ]
+        if base_pt == MONTH
+        else [],
         QUARTER: _period_axis(all_months, QUARTER),
         YEAR: _period_axis(all_months, YEAR),
     }
@@ -193,7 +203,6 @@ def build_view(rows: Sequence[ContractRow], meta_src: dict, category: str = "2W"
     latest = all_months[-1]
     ev_months = sorted({d for (c, f, p), m in mm.items() if p == "ev" for d in m})
     prod_months = sorted({d for (c, f, p), m in mm.items() if f == "production" for d in m})
-    cat_cfg = load_categories().get(category, {})
     resolver = load_company_resolver()
     has_ev = bool(ev_months)  # EV is only ever present where it is a derivable subset (2W)
     ev_only_makers = sorted(c for c in makers if resolver.is_ev_only(c))

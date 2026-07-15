@@ -161,8 +161,17 @@ function Dashboard({
   const host = useHostContext();
   const snapshot = useSnapshotMode();
   const [tab, setTab] = useQuery<Tab>("tab", "sales");
-  const [pt, setPt] = useQuery<PeriodType>("pt", "month");
+  const [rawPt, setPt] = useQuery<PeriodType>("pt", "month");
   const [mode, setMode] = useQuery<DisplayMode>("mode", "both");
+  // Only offer granularities the category actually has (CV is quarterly-native → no month
+  // level). Fall back to the native frequency when the requested one is unavailable.
+  const PTS: PeriodType[] = ["month", "quarter", "year"];
+  const availablePts = PTS.filter((k) => (view.periods[k]?.length ?? 0) > 0);
+  const pt = availablePts.includes(rawPt)
+    ? rawPt
+    : availablePts.includes(view.meta.native_frequency)
+      ? view.meta.native_frequency
+      : availablePts[0];
   const axis = view.periods[pt];
   const [periodKey, setPeriodKey] = useQuery("period", axis[axis.length - 1]?.key ?? "");
   const [oem, setOem] = useQuery("oem", host.oem ?? "");
@@ -193,7 +202,7 @@ function Dashboard({
           <CategorySelect categories={categories} value={cat} onChange={setCat} />
           <OemSelect view={view} value={oem} onChange={setOem} />
           <div className="seg" role="group" aria-label="Period granularity">
-            {(["month", "quarter", "year"] as PeriodType[]).map((k) => (
+            {availablePts.map((k) => (
               <button key={k} className={pt === k ? "active" : ""} onClick={() => setPt(k)}>
                 {k === "month" ? "Monthly" : k === "quarter" ? "Quarterly" : "Yearly"}
               </button>

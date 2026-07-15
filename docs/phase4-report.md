@@ -116,8 +116,43 @@ TI Clean Mobility, Pinnacle Mobility), segments `{Passenger, Goods}`, industry f
 reconciliation 983/983, one acknowledged overshoot, `has_ev=false`. Sanity: Dec-2025 domestic
 3W = 60,641 units, Bajaj Auto 60.7% share.
 
-## 8. Next categories (later PRs)
+## 8. Commercial Vehicles (CV) — third category, quarterly-native
 
-- **CV** — quarterly-native (`native_frequency=quarter`), has a production flow.
-- **Tractors** — **confirm the source is not SIAM/TMA before building**; merged-cell
-  forward-fill expected. Blocked on source confirmation.
+CV is the most structurally different category and exercised parts of the platform the
+monthly categories never did.
+
+- **Quarterly is the reported base.** CV is reported by fiscal quarter (`1QFY20`…), not by
+  month. The frozen contract already anticipates this ("reported higher-frequency only where
+  source has no monthly (CV)"), so CV rows are `period_type=quarter`,
+  `native_frequency=quarter`, `calc_status=reported` — quarters are **never** derived from
+  months. A dedicated `excel_cv.py` (`CvQuarterlyAdapter`) reads the quarter columns from the
+  header; the sheet's derived annual / half-year / market-share columns are ignored.
+- **`build_view` is now base-frequency aware.** It detects `native_frequency` and, for a
+  quarter-native category, treats quarter as the base and derives **year = sum of 4 quarters**
+  (partial FY flagged, `expected=4`), with **no month level** (`periods.month = []`). The
+  monthly categories are unchanged (still month → quarter → year). The reconciliation gate was
+  generalised the same way (sum the reported base, whether month or quarter).
+- **Three flow regions on one sheet** — Domestic Sales, Exports, **Production** — each with
+  the same four leaf segments (M&HCV Passenger/Goods, LCV Passenger/Goods). CV is the first
+  category with a real production flow in File 1. Intermediate subtotals ("Total M&HCVs",
+  "Total LCVs") and the maker-rollup "… - Overall" tails are skipped; the grand "Total CVs"
+  row is the reported industry total.
+- **An unfinalized trailing quarter is dropped.** The workbook computes the latest quarter as
+  annual − 9M; while the annual figure is still blank that cell resolves to a large **negative**
+  number (4QFY26 ≈ −(Q1+Q2+Q3)). A reported industry total can never be negative, so any
+  quarter whose domestic "Total CVs" is < 0 is treated as an unfinalized formula column and
+  excluded. Last real quarter: **Q3 FY26**.
+- **UI needed one real change:** the period-granularity control now offers only the
+  granularities a category actually has, so CV shows **Quarterly / Yearly** (no Monthly) and
+  defaults to its native frequency. EV renders unavailable (electric-bus makers — Olectra, PMI,
+  Switch, JBM — sit inline); Production renders (CV has a production flow). Verified headless.
+
+CV results: **2,994 rows**, 20 makers (6 EV-only bus builders), 27 quarters (Q1FY20–Q3FY26,
+Q4FY26 dropped), reconciliation clean (SIAM lists every CV maker — no residual). Sanity:
+Q3 FY26 domestic CV = 289,659 (+21.8% YoY), Tata Motors 36% share.
+
+## 9. Next category
+
+- **Tractors** — a dedicated `Tractors` sheet exists in File 1, but **confirm the source is
+  not SIAM/TMA before building** (per the original Phase 4 note); merged-cell forward-fill
+  expected. Blocked on source confirmation.
