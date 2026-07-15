@@ -186,3 +186,18 @@ export function IconExternal() {
     </svg>
   );
 }
+export function IconSun() {
+  return (
+    <svg {...S}>
+      <circle cx="8" cy="8" r="3.2" />
+      <path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1" />
+    </svg>
+  );
+}
+export function IconMoon() {
+  return (
+    <svg {...S}>
+      <path d="M13 9.4A5.5 5.5 0 1 1 6.6 3a4.3 4.3 0 0 0 6.4 6.4Z" />
+    </svg>
+  );
+}

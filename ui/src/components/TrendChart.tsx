@@ -55,15 +55,15 @@ export function TrendChart({
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel ?? "trend chart"}>
         {tickVals.map((tv, i) => (
           <g key={i}>
-            <line x1={padL} x2={W - padR} y1={y(tv)} y2={y(tv)} stroke="rgba(255,247,221,0.08)" strokeWidth={1} />
-            <text x={padL - 8} y={y(tv) + 3} textAnchor="end" fontSize={10} fill="rgba(255,247,221,0.46)">
+            <line x1={padL} x2={W - padR} y1={y(tv)} y2={y(tv)} style={{ stroke: "var(--chart-grid)" }} strokeWidth={1} />
+            <text x={padL - 8} y={y(tv) + 3} textAnchor="end" fontSize={10} style={{ fill: "var(--chart-axis)" }}>
               {yFormat(tv)}
             </text>
           </g>
         ))}
         {/* x labels: first, middle, last */}
         {[0, Math.floor((n - 1) / 2), n - 1].map((i) => (
-          <text key={i} x={x(i)} y={H - 6} textAnchor="middle" fontSize={10} fill="rgba(255,247,221,0.46)">
+          <text key={i} x={x(i)} y={H - 6} textAnchor="middle" fontSize={10} style={{ fill: "var(--chart-axis)" }}>
             {labels[i]}
           </text>
         ))}
@@ -73,18 +73,12 @@ export function TrendChart({
           return (
             <g key={s.name}>
               {segs.map((d, i) => (
-                <path key={i} d={d} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" />
+                <path key={i} d={d} fill="none" style={{ stroke: s.color }} strokeWidth={2} strokeLinejoin="round" />
               ))}
               {last && (
                 <>
-                  <circle cx={x(last.i)} cy={y(last.v)} r={3} fill={s.color} />
-                  <text
-                    x={x(last.i) + 6}
-                    y={y(last.v) + 3}
-                    fontSize={11}
-                    fontWeight={600}
-                    fill={s.color}
-                  >
+                  <circle cx={x(last.i)} cy={y(last.v)} r={3} style={{ fill: s.color }} />
+                  <text x={x(last.i) + 6} y={y(last.v) + 3} fontSize={11} fontWeight={600} style={{ fill: s.color }}>
                     {yFormat(last.v)}
                   </text>
                 </>

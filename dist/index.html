@@ -4,8 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OEM Tracker</title>
-    <script type="module" crossorigin src="./assets/index-BqE_z_Z-.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-BIEWOsA8.css">
+    <script>
+      // Resolve theme before first paint (no flash): saved choice → system preference → light.
+      (function () {
+        try {
+          var t = localStorage.getItem("oemtracker-theme");
+          if (t !== "light" && t !== "dark") {
+            t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          }
+          document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "light");
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index-gylx3Fis.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BO9hoDJ_.css">
   </head>
   <body>
     <div id="root"></div>

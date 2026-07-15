@@ -1,41 +1,114 @@
 /* OEM Tracker — Munshot embedded dashboard.
-   Premium dark analytical system (design.md §4): obsidian canvas, warm cream text,
-   restrained champagne-gold accent. Green/red only for analytical direction.
-   Flat cards, 4px radius, 1px hairline borders, no shadows or gradients. */
+   Restrained analytical blue system with full Light + Dark modes, driven entirely by
+   theme tokens (data-theme on <html>). Green/red only for analytical direction; blue for
+   chrome/accents. Flat cards, 4px radius, 1px hairline borders, no shadows or gradients. */
 :root {
-  --canvas: #080a0b;
-  --surface-1: #0e1113;
-  --surface-2: #131719;
-  --surface-hover: #171b1e;
-
-  --text-primary: #fff7dd;
-  --text-secondary: rgba(255, 247, 221, 0.72);
-  --text-muted: rgba(255, 247, 221, 0.46);
-  --text-disabled: rgba(255, 247, 221, 0.28);
-
-  --accent: #c8ad86;
-  --accent-soft: rgba(200, 173, 134, 0.12);
-  --accent-border: rgba(200, 173, 134, 0.58);
-
-  --border: rgba(255, 247, 221, 0.14);
-  --border-subtle: rgba(255, 247, 221, 0.08);
-
-  --positive: #4ade80;
-  --positive-soft: rgba(74, 222, 128, 0.1);
-  --negative: #ff6b5e;
-  --negative-soft: rgba(255, 107, 94, 0.1);
-  --neutral-data: #8b8b86;
-
-  --ev: #c8ad86; /* EV = champagne gold */
-  --ice: #66635f; /* ICE = muted warm grey */
-
-  --amber: #d9a441;
-  --amber-soft: rgba(217, 164, 65, 0.1);
-  --amber-border: rgba(217, 164, 65, 0.42);
-
   --radius: 4px;
   --pill: 999px;
   font-synthesis: none;
+}
+
+/* ---------------- Light mode (default) ---------------- */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --canvas: #f9fcff;
+  --surface-1: #ffffff;
+  --surface-2: #f3f7ff; /* subtle alt rows / skeletons */
+  --surface-hover: #eaf2ff;
+
+  --text-primary: #081f5c;
+  --text-secondary: #334eac;
+  --text-muted: #6b7ba1; /* desaturated blue-grey */
+  --text-disabled: #a7b4d0;
+
+  --accent: #334eac;
+  --accent-soft: #e7f1ff; /* soft active / selected background */
+  --accent-border: rgba(51, 78, 172, 0.45);
+
+  --border: #d0e3ff;
+  --border-subtle: #e7f1ff;
+
+  --positive: #1c8a4e;
+  --positive-soft: rgba(28, 138, 78, 0.1);
+  --negative: #c53b38;
+  --negative-soft: rgba(197, 59, 56, 0.1);
+  --neutral-data: #7b88a8;
+
+  --ev: #334eac; /* EV = brighter blue accent */
+  --ice: #94a3b8; /* ICE = muted blue-grey */
+
+  --amber: #b7791f;
+  --amber-soft: rgba(183, 121, 31, 0.1);
+  --amber-border: rgba(183, 121, 31, 0.34);
+
+  --header-bg: rgba(249, 252, 255, 0.9);
+  --tooltip-bg: #ffffff;
+
+  --chart-1: #334eac; /* primary chart line */
+  --chart-2: #7096d1; /* secondary chart line */
+  --chart-3: #64748b; /* tertiary — muted slate, kept distinct */
+  --chart-focus: #334eac; /* hovered/locked line */
+  --chart-grid: rgba(8, 31, 92, 0.08);
+  --chart-axis: #6b7ba1;
+  --chart-crosshair: rgba(8, 31, 92, 0.3);
+
+  --scrollbar-thumb: #cfe0f7;
+  --scrollbar-track: transparent;
+
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%23334EAC' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+
+/* ---------------- Dark mode ---------------- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --canvas: #081f5c;
+  --surface-1: #0e2a6b; /* card — slightly lighter navy */
+  --surface-2: #143177; /* table header / alt rows */
+  --surface-hover: #183a86;
+
+  --text-primary: #f9fcff;
+  --text-secondary: #d0e3ff;
+  --text-muted: #93a6ce; /* softened blue-grey from #7096D1 */
+  --text-disabled: #6d80ab;
+
+  --accent: #7096d1;
+  --accent-soft: rgba(112, 150, 209, 0.16);
+  --accent-border: rgba(112, 150, 209, 0.55);
+
+  --border: rgba(208, 227, 255, 0.16);
+  --border-subtle: rgba(208, 227, 255, 0.09);
+
+  --positive: #52c283;
+  --positive-soft: rgba(82, 194, 131, 0.14);
+  --negative: #e77b72;
+  --negative-soft: rgba(231, 123, 114, 0.14);
+  --neutral-data: #93a6ce;
+
+  --ev: #8fb3e8;
+  --ice: #5e77a6;
+
+  --amber: #e0b15a;
+  --amber-soft: rgba(224, 177, 90, 0.13);
+  --amber-border: rgba(224, 177, 90, 0.38);
+
+  --header-bg: rgba(8, 31, 92, 0.92);
+  --tooltip-bg: #143177;
+
+  --chart-1: #d0e3ff;
+  --chart-2: #7096d1;
+  --chart-3: #9aa9c9;
+  --chart-focus: #d0e3ff;
+  --chart-grid: rgba(208, 227, 255, 0.11);
+  --chart-axis: #93a6ce;
+  --chart-crosshair: rgba(208, 227, 255, 0.3);
+
+  --scrollbar-thumb: rgba(208, 227, 255, 0.22);
+  --scrollbar-track: transparent;
+
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%237096D1' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
 * {
@@ -59,6 +132,29 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* --- themed scrollbars --- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--pill);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-border);
+  background-clip: padding-box;
+}
+
 /* --- shell (design.md §3) --- */
 .shell {
   display: flex;
@@ -75,7 +171,7 @@ body {
   justify-content: space-between;
   gap: 16px;
   padding: 0 20px;
-  background: rgba(8, 10, 11, 0.96);
+  background: var(--header-bg);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(8px);
   z-index: 10;
@@ -133,7 +229,7 @@ select,
 select {
   appearance: none;
   padding-right: 26px;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%23c8ad86' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-image: var(--select-arrow);
   background-repeat: no-repeat;
   background-position: right 9px center;
 }
@@ -807,7 +903,7 @@ tr.total td.oem {
   pointer-events: none;
   min-width: 148px;
   padding: 8px 10px;
-  background: rgba(14, 17, 19, 0.98);
+  background: var(--tooltip-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-size: 11.5px;

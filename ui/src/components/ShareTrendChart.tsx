@@ -7,7 +7,10 @@
 import { useRef, useState } from "react";
 import { fmtPp, fmtShare } from "../lib/format";
 
-const GOLD = "#c8ad86";
+// Focus/highlight colour is theme-driven (light: primary blue, dark: pale blue). SVG
+// presentation attributes don't resolve CSS var() reliably, so theme colours are applied
+// via inline `style` throughout this component.
+const FOCUS = "var(--chart-focus)";
 
 export interface TrendPoint {
   label: string; // period label, e.g. "Jan '26" / "FY24"
@@ -157,8 +160,8 @@ export function ShareTrendChart({
           {/* y grid + ticks */}
           {tickVals.map((tv, i) => (
             <g key={i}>
-              <line x1={padL} x2={W - padR} y1={y(tv)} y2={y(tv)} stroke="rgba(255,247,221,0.07)" strokeWidth={1} />
-              <text x={padL - 10} y={y(tv) + 3} textAnchor="end" fontSize={10} fill="rgba(255,247,221,0.46)">
+              <line x1={padL} x2={W - padR} y1={y(tv)} y2={y(tv)} style={{ stroke: "var(--chart-grid)" }} strokeWidth={1} />
+              <text x={padL - 10} y={y(tv) + 3} textAnchor="end" fontSize={10} style={{ fill: "var(--chart-axis)" }}>
                 {(tv * 100).toFixed(0)}%
               </text>
             </g>
@@ -168,7 +171,7 @@ export function ShareTrendChart({
             transform={`translate(15 ${padT + (H - padT - padB) / 2}) rotate(-90)`}
             textAnchor="middle"
             fontSize={10}
-            fill="rgba(255,247,221,0.56)"
+            style={{ fill: "var(--chart-axis)" }}
             letterSpacing="0.02em"
           >
             {yLabel}
@@ -182,7 +185,7 @@ export function ShareTrendChart({
               textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"}
               fontSize={10}
               fontWeight={hoverIdx === i ? 600 : 400}
-              fill={hoverIdx === i ? "rgba(255,247,221,0.78)" : "rgba(255,247,221,0.46)"}
+              style={{ fill: hoverIdx === i ? "var(--text-secondary)" : "var(--chart-axis)" }}
             >
               {labels[i]}
             </text>
@@ -195,7 +198,7 @@ export function ShareTrendChart({
               x2={x(hoverIdx)}
               y1={padT}
               y2={H - padB}
-              stroke="rgba(255,247,221,0.22)"
+              style={{ stroke: "var(--chart-crosshair)" }}
               strokeWidth={1}
               strokeDasharray="3 3"
             />
@@ -207,7 +210,7 @@ export function ShareTrendChart({
             const dim = effFocus != null && !isFocus;
             const segs = buildSegments(l.points, x, y);
             const li = lastDefined(l.points);
-            const stroke = isFocus ? GOLD : l.color;
+            const stroke = isFocus ? FOCUS : l.color;
             return (
               <g key={l.name} className="tline" style={{ opacity: dim ? 0.28 : 1 }}>
                 {segs.map((d, i) => (
@@ -216,7 +219,7 @@ export function ShareTrendChart({
                     className="tpath"
                     d={d}
                     fill="none"
-                    stroke={stroke}
+                    style={{ stroke }}
                     strokeWidth={isFocus ? 2.6 : 1.6}
                     strokeLinejoin="round"
                     strokeLinecap="round"
@@ -224,19 +227,19 @@ export function ShareTrendChart({
                 ))}
                 {/* faint marker at crosshair for context */}
                 {hoverIdx != null && !isFocus && l.points[hoverIdx]?.value != null && (
-                  <circle cx={x(hoverIdx)} cy={y(l.points[hoverIdx]!.value!)} r={2.4} fill={stroke} opacity={0.7} />
+                  <circle cx={x(hoverIdx)} cy={y(l.points[hoverIdx]!.value!)} r={2.4} style={{ fill: stroke }} opacity={0.7} />
                 )}
                 {/* latest-share label at the last defined point (collision-avoided y) */}
                 {li >= 0 && l.points[li].value != null && (
                   <>
-                    <circle cx={x(li)} cy={y(l.points[li].value!)} r={isFocus ? 3.2 : 2.6} fill={stroke} />
+                    <circle cx={x(li)} cy={y(l.points[li].value!)} r={isFocus ? 3.2 : 2.6} style={{ fill: stroke }} />
                     <text
                       className="tlabel"
                       x={x(li) + 8}
                       y={(latestY.get(l.name) ?? y(l.points[li].value!)) + 3}
                       fontSize={10.5}
                       fontWeight={isFocus ? 600 : 500}
-                      fill={stroke}
+                      style={{ fill: stroke }}
                     >
                       {l.display} {fmtShare(l.points[li].value)}
                     </text>
@@ -249,13 +252,13 @@ export function ShareTrendChart({
           {/* enlarged active point */}
           {hoverIdx != null && focusLine && focusLine.points[hoverIdx]?.value != null && (
             <>
-              <circle cx={x(hoverIdx)} cy={y(focusLine.points[hoverIdx]!.value!)} r={5} fill={GOLD} />
+              <circle cx={x(hoverIdx)} cy={y(focusLine.points[hoverIdx]!.value!)} r={5} style={{ fill: FOCUS }} />
               <circle
                 cx={x(hoverIdx)}
                 cy={y(focusLine.points[hoverIdx]!.value!)}
                 r={5}
                 fill="none"
-                stroke="rgba(8,10,11,0.9)"
+                style={{ stroke: "var(--canvas)" }}
                 strokeWidth={1.5}
               />
             </>
@@ -298,7 +301,7 @@ export function ShareTrendChart({
               onClick={() => onLock(l.name)}
               title={`Focus ${l.display}`}
             >
-              <i style={{ background: isFocus ? GOLD : l.color }} />
+              <i style={{ background: isFocus ? FOCUS : l.color }} />
               {l.display}
             </button>
           );

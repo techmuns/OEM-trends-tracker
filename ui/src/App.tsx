@@ -18,6 +18,8 @@ import {
   IconExternal,
   IconFactory,
   IconGrowth,
+  IconMoon,
+  IconSun,
   IconTrendDown,
   IconTrendUp,
   Loading,
@@ -25,15 +27,16 @@ import {
   Unavailable,
   WidgetCard,
 } from "./components/ui";
+import { useTheme } from "./lib/theme";
 
 type Tab = "sales" | "ev" | "prod";
 
-// Series colours — champagne gold for the focus line; green/red reserved for deltas only.
-const GOLD = "#c8ad86";
-const ICE = "#66635f";
-// Distinct default line colours by rank (design refinement): rank 1 champagne gold,
-// rank 2 warm cream-grey, rank 3 muted steel-grey — deliberately different hues.
-const RANK_COLORS = ["#c8ad86", "#b3a790", "#8794a3"];
+// Series colours are theme tokens (resolved from CSS custom properties). Green/red stay
+// reserved for deltas. EV = brighter blue accent, ICE = muted blue-grey.
+const EV_LINE = "var(--ev)";
+const ICE_LINE = "var(--ice)";
+// Distinct default line colours by rank: primary blue, secondary blue, muted slate.
+const RANK_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)"];
 
 export function App() {
   const manifest = useManifest();
@@ -127,6 +130,23 @@ function useQuery<T extends string>(key: string, def: T): [T, (v: T) => void] {
 const METRIC_FOR_TAB: Record<Tab, string> = { sales: "sales", ev: "ev", prod: "exports" };
 const TAB_FOR_METRIC: Record<string, Tab> = { sales: "sales", ev: "ev", exports: "prod" };
 
+// Compact Light/Dark switch (sun/moon). Persists + applies immediately via useTheme.
+function ThemeToggle() {
+  const [theme, toggle] = useTheme();
+  const next = theme === "dark" ? "light" : "dark";
+  return (
+    <button
+      className="btn icon"
+      onClick={toggle}
+      title={`Switch to ${next} mode`}
+      aria-label={`Switch to ${next} mode`}
+      aria-pressed={theme === "dark"}
+    >
+      {theme === "dark" ? <IconSun /> : <IconMoon />}
+    </button>
+  );
+}
+
 function Dashboard({
   view,
   categories,
@@ -197,6 +217,7 @@ function Dashboard({
           >
             ↻
           </button>
+          <ThemeToggle />
           <button className="btn export accent" onClick={() => window.print()} title="Export current view (print / PDF)">
             ↧ Export
           </button>
@@ -401,7 +422,7 @@ function buildTrendLines(
 ): TrendLine[] {
   return names.map((name) => {
     const rank = baseNames.indexOf(name);
-    const color = rank >= 0 ? RANK_COLORS[rank] ?? "#8794a3" : "#8794a3";
+    const color = rank >= 0 ? RANK_COLORS[rank] ?? "var(--chart-3)" : "var(--chart-3)";
     const s = getSeries(view, name, "domestic", "all", pt);
     const points: TrendPoint[] = winAxis.map((p) => {
       const fi = fullAxis.findIndex((a) => a.key === p.key);
@@ -800,13 +821,13 @@ function EvTab({ view, pt, period, setPeriod }: { view: ViewModel; pt: PeriodTyp
         <WidgetCard
           title="EV vs ICE — share of reported 2W universe"
           subtitle={`SIAM reported universe · to ${evPeriod.label}`}
-          footer="EV = champagne gold · ICE = warm grey · share within reported SIAM universe"
+          footer="EV = blue accent · ICE = muted blue-grey · share within reported SIAM universe"
         >
           {evPoints.some((p) => p.value !== null) ? (
             <TrendChart
               series={[
-                { name: "EV", color: GOLD, points: evPoints },
-                { name: "ICE", color: ICE, points: icePoints },
+                { name: "EV", color: EV_LINE, points: evPoints },
+                { name: "ICE", color: ICE_LINE, points: icePoints },
               ]}
               yFormat={(n) => (n * 100).toFixed(0) + "%"}
               domain={[0, 1]}
