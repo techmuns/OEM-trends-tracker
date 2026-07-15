@@ -7,8 +7,8 @@ interface (the frozen contract).
 |---|---|---|
 | **0 — Foundation** | Repo, frozen contract, dictionaries, adapter interface, validation framework, aggregation calendar, snapshot/revision store, fixtures, CI/CD, docs | done |
 | **1 — Backfill** | File 1 → tidy store (2W), real gate logic, aggregation, first real snapshot + bundle (`latest_period` Dec-2025) | **done — see [phase1-report.md](phase1-report.md)** |
-| 2 — Live ingest | Source adapters (SIAM / VAHAN / file-drop), revision handling, monthly cron, quarantine + alert | next |
-| 3 — Dashboard UI | Munshot embedded dashboard reading the frozen bundle | later |
+| **2 — Live ingest** | File 2 adapter, seam validation, watched-folder + cron, revisions; series extended to May-2026 (maker-level) | **done — see [phase2-report.md](phase2-report.md)** |
+| 3 — Dashboard UI | Munshot embedded dashboard reading the frozen bundle | next |
 
 ## Phase 0 — what's built (and what is deliberately NOT)
 

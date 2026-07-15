@@ -72,3 +72,17 @@ ABSURD_MONTHLY_MAGNITUDE = 5_000_000  # units/month for one maker+segment; ~50x 
 # market share cannot be computed before FY15. Recorded in docs/contract-coverage.md.
 COMPANY_HISTORY_FLOOR = "2014-04-01"
 INDUSTRY_HISTORY_FLOOR = "2012-04-01"
+
+# --- Phase 2: File 2 (monthly SIAM) seam ---
+# Decision (extend-only): File 1 owns history through Dec-2025; File 2 supplies ONLY the
+# new months from here on. File 2 is coarser (maker-level, no segment, no EV split), so it
+# never supersedes File 1's richer rows — it appends the forward extension.
+FILE1_LAST_PERIOD = "2025-12-01"
+FILE2_EXTEND_FROM = "2026-01-01"
+
+# The seam is validated on the one truly comparable series across sources: the reported
+# INDUSTRY total. It must match within tolerance across overlap months, else the join is a
+# real discontinuity and fails loudly. Maker-level differences (File 1 is a lossy summary)
+# are reported, not failed.
+SEAM_INDUSTRY_TOL_ABS = 500.0
+SEAM_INDUSTRY_TOL_REL = 0.005

@@ -14,6 +14,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = REPO_ROOT / "pipeline" / "contract" / "schema.json"
 FIXTURE_PATH = REPO_ROOT / "fixtures" / "sample_bundle.json"
 REAL_WORKBOOK = REPO_ROOT / "data" / "raw" / "Auto_Database__Summary__-_Spark.xlsx"
+REAL_WORKBOOK_F2 = (
+    REPO_ROOT / "data" / "raw" / "processed" / "Monthly_SIAM_Industry_Data_Jun26.xlsx"
+)
 _IST = timezone(timedelta(hours=5, minutes=30))
 
 
@@ -26,6 +29,20 @@ def real_parse():
 
     adapter = ExcelSparkAdapter(REAL_WORKBOOK, ingest_date=datetime(2026, 7, 15, 9, 0, tzinfo=_IST))
     rows = adapter.parse(adapter.fetch("2025-12"))
+    return adapter, rows
+
+
+@pytest.fixture(scope="session")
+def real_parse_f2():
+    """Parse the committed File 2 (monthly SIAM) once. Skips if not present."""
+    if not REAL_WORKBOOK_F2.exists():
+        pytest.skip("File 2 workbook not present in data/raw/processed/")
+    from pipeline.adapters.siam_monthly import SiamMonthlyAdapter
+
+    adapter = SiamMonthlyAdapter(
+        REAL_WORKBOOK_F2, ingest_date=datetime(2026, 7, 15, 10, 0, tzinfo=_IST)
+    )
+    rows = adapter.parse(adapter.fetch("2026-05"))
     return adapter, rows
 
 

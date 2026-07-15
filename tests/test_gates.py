@@ -14,11 +14,12 @@ from pipeline.validate.gates import (
 )
 
 
-def test_six_gates_registered() -> None:
+def test_gates_registered() -> None:
     names = [g.name for g in REGISTERED_GATES]
     assert names == [
         "schema_conformance",
         "totals_reconciliation",
+        "source_seam_check",
         "row_count_delta",
         "value_range_sanity",
         "period_continuity",

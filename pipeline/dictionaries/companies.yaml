@@ -40,11 +40,13 @@ companies:
     aliases:
       - Honda Motorcycle & Scooter India (Pvt) Ltd
       - Honda Motorcycle & Scooter India Pvt Ltd   # EV-block spelling (no parens)
+      - HMSI                                        # File 2 (monthly SIAM) spelling
 
   - canonical: India Yamaha Motor
     category_hint: 2W
     aliases:
       - India Yamaha Motor Pvt Ltd
+      - Yamaha                                      # File 2 spelling
 
   - canonical: Mahindra Two Wheelers
     category_hint: 2W
@@ -65,11 +67,13 @@ companies:
     category_hint: 2W
     aliases:
       - Suzuki Motorcycle India Pvt Ltd
+      - Suzuki Motorcycles                          # File 2 spelling
 
   - canonical: TVS Motor Company
     category_hint: 2W
     aliases:
       - TVS Motor Company Ltd
+      - TVS Motor                                   # File 2 spelling
 
   - canonical: Harley-Davidson India
     category_hint: 2W
@@ -95,3 +99,11 @@ companies:
     category_hint: 2W
     aliases:
       - UM Lohia Two Wheelers Pvt Ltd
+
+  # File 2 (monthly SIAM) publishes an explicit residual bucket for makers it does not
+  # break out individually. It is a legitimate row (the reported-universe remainder), not
+  # a company — kept so maker-level share sums to the reported total.
+  - canonical: Others
+    category_hint: 2W
+    aliases:
+      - Others

@@ -1,10 +1,11 @@
 name: Monthly ingest
 
-# The self-driving feed. Runs monthly and on-demand. In Phase 0 it is a no-op that exits 0
-# (no adapter configured yet). From Phase 2 it fetches -> validates -> (on all gates pass)
-# commits a new snapshot + bundle, which Cloudflare Pages then auto-deploys. On any gate
-# failure it quarantines the payload and FAILS the workflow — that failure is the alert,
-# and the last good bundle stays live.
+# The self-driving feed. Runs monthly and on-demand. It processes any workbook dropped in
+# data/raw/incoming/ (a human commits the licensed file there — the one manual step): it
+# parses -> validates -> on all gates pass writes a snapshot + normalized store + bundle,
+# archives the file to data/raw/processed/, and commits the result, which Cloudflare Pages
+# auto-deploys. On any gate failure it quarantines the file and the job FAILS — that
+# failure is the alert, and the last good bundle stays live (nothing is committed).
 on:
   schedule:
     # 06:30 UTC on the 3rd of each month (SIAM monthly data lands early in the month).
@@ -38,3 +39,16 @@ jobs:
 
       - name: Run ingest
         run: uv run python -m pipeline.ingest
+
+      - name: Commit accepted data (triggers Cloudflare deploy)
+        if: success()
+        run: |
+          if [ -n "$(git status --porcelain data/)" ]; then
+            git config user.name "oem-tracker-bot"
+            git config user.email "actions@github.com"
+            git add data/
+            git commit -m "ingest: automated data update [skip ci]"
+            git push
+          else
+            echo "no data changes to commit"
+          fi

@@ -6,12 +6,14 @@ import pytest
 
 from pipeline.adapters.base import RawPayload, SourceAdapter, ValidationResult
 from pipeline.adapters.excel_spark import ExcelSparkAdapter
-from pipeline.adapters.siam import SiamAdapter
+from pipeline.adapters.siam_monthly import SiamMonthlyAdapter
+from pipeline.adapters.siam_scrape import SiamScrapeAdapter
 from pipeline.adapters.vahan import VahanAdapter
 
-# Phase 2 stubs (still NotImplementedError). ExcelSparkAdapter is implemented in Phase 1.
-STUB_ADAPTERS = [SiamAdapter, VahanAdapter]
-ALL_ADAPTERS = [ExcelSparkAdapter, SiamAdapter, VahanAdapter]
+# Stubs still raising NotImplementedError. excel_spark (Phase 1) and siam_monthly (Phase 2)
+# are implemented; the SIAM scraper and VAHAN stay stubs.
+STUB_ADAPTERS = [SiamScrapeAdapter, VahanAdapter]
+ALL_ADAPTERS = [ExcelSparkAdapter, SiamMonthlyAdapter, SiamScrapeAdapter, VahanAdapter]
 
 
 def test_abc_cannot_be_instantiated() -> None:

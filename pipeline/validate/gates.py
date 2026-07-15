@@ -32,6 +32,8 @@ from pipeline.contract.constants import (
     ABSURD_MONTHLY_MAGNITUDE,
     INDUSTRY_TOTAL_CANONICAL,
     KNOWN_MISSING_MONTHS,
+    SEAM_INDUSTRY_TOL_ABS,
+    SEAM_INDUSTRY_TOL_REL,
 )
 from pipeline.contract.models import ContractRow
 from pipeline.store.revisions import observation_key
@@ -279,10 +281,88 @@ class RevisionDetectionGate:
         )
 
 
+class SourceSeamCheckGate:
+    """Validate the join where two source_files meet in one series.
+
+    The only truly comparable series across File 1 (segmented) and File 2 (maker-level) is
+    the reported INDUSTRY total — it must match within tolerance over the overlap, else the
+    join is a real discontinuity and fails loudly. Maker-level differences (File 1 is a
+    lossy hand-summary) are REPORTED, not failed — the extend-only policy never supersedes
+    File 1's rows, so there is no value conflict in the store, only a documented seam.
+
+    Reads File-2 overlap values from ctx.extras['seam_reference'] and compares against the
+    File-1 rows already in the store (ctx.rows).
+    """
+
+    name = "source_seam_check"
+
+    def run(self, ctx: GateContext) -> GateResult:
+        seam = ctx.extras.get("seam_reference")
+        if not seam:
+            return GateResult(self.name, GateStatus.SKIP, "no cross-source overlap to check")
+
+        # index File-1 side: industry totals (segment=null) and maker sums (over segments)
+        f1_industry: dict[tuple[str, date], float | None] = {}
+        f1_maker: dict[tuple[str, str, date], float] = {}
+        for r in ctx.rows:
+            if r.is_superseded or r.period_type.value != "month":
+                continue
+            if r.company_canonical == INDUSTRY_TOTAL_CANONICAL and r.segment is None:
+                f1_industry[(r.flow.value, r.period_date)] = r.value
+            elif r.segment is not None and r.powertrain.value == "all" and r.value is not None:
+                k = (r.company_canonical, r.flow.value, r.period_date)
+                f1_maker[k] = f1_maker.get(k, 0.0) + r.value
+
+        industry_mismatches: list[str] = []
+        maker_diffs: list[str] = []
+        max_maker_pct = 0.0
+        for (canonical, flow), monthly in seam.items():
+            for month, f2 in monthly.items():
+                if canonical == INDUSTRY_TOTAL_CANONICAL:
+                    f1 = f1_industry.get((flow, month))
+                    if f1 is None:
+                        continue
+                    if abs(f1 - f2) > max(SEAM_INDUSTRY_TOL_ABS, SEAM_INDUSTRY_TOL_REL * abs(f1)):
+                        industry_mismatches.append(
+                            f"{flow} {month}: File1={f1:.0f} vs File2={f2:.0f}"
+                        )
+                else:
+                    k = (canonical, flow, month)
+                    if k not in f1_maker:
+                        continue
+                    f1 = f1_maker[k]
+                    if abs(f1 - f2) > 0.5:
+                        pct = (abs(f1 - f2) / f1 * 100) if f1 else 0.0
+                        max_maker_pct = max(max_maker_pct, pct)
+                        maker_diffs.append(
+                            f"{canonical}/{flow} {month}: File1={f1:.0f} vs File2={f2:.0f} ({pct:.1f}%)"
+                        )
+
+        details = {
+            "industry_mismatches": industry_mismatches[:10],
+            "maker_diff_count": len(maker_diffs),
+            "max_maker_diff_pct": round(max_maker_pct, 1),
+            "example_maker_diffs": maker_diffs[:5],
+        }
+        if industry_mismatches:
+            return GateResult(
+                self.name,
+                GateStatus.FAIL,
+                f"{len(industry_mismatches)} industry-total discontinuities at the seam",
+                details,
+            )
+        msg = (
+            f"industry totals match across overlap; {len(maker_diffs)} maker-level diffs "
+            f"(max {max_maker_pct:.1f}%, reported not superseded)"
+        )
+        return GateResult(self.name, GateStatus.PASS, msg, details)
+
+
 # The registry. Order is the run order.
 REGISTERED_GATES: list[Gate] = [
     SchemaConformanceGate(),
     TotalsReconciliationGate(),
+    SourceSeamCheckGate(),
     RowCountDeltaGate(),
     ValueRangeSanityGate(),
     PeriodContinuityGate(),
