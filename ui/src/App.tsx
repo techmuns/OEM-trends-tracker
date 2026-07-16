@@ -12,6 +12,7 @@ import { DragHandle } from "./lib/dragfx";
 import { CompareDockTab } from "./components/compare/CompareDockTab";
 import { DockedCompareWorkspace } from "./components/compare/DockedCompareWorkspace";
 import { ResizableSplitPane } from "./components/compare/ResizableSplitPane";
+import { UploadPanel } from "./components/UploadPanel";
 import {
   Delta,
   deltaDir,
@@ -48,12 +49,6 @@ const BASIS_LABEL: Record<string, string> = {
   MANUAL: "manual entries",
 };
 const basisOf = (view: ViewModel): string => BASIS_LABEL[view.meta.source] ?? "reported volumes";
-
-// "Upload data file" opens the GitHub web upload for the watched drop folder — the analyst is
-// already authenticated (Cloudflare Access on the dashboard, GitHub sign-in for the commit),
-// so no server-side token is needed. The dropped file is ingested by the ingest workflow.
-// (An optional Cloudflare Pages Function alternative is documented in docs/manual-ingest.md.)
-const UPLOAD_URL = "https://github.com/techmuns/OEM-trends-tracker/upload/main/data/raw/incoming";
 const isRegs = (view: ViewModel): boolean => view.meta.source === "VAHAN";
 // The primary-metric noun: SIAM = "Sales", VAHAN = "Registrations".
 const flowNoun = (view: ViewModel): string => (isRegs(view) ? "Registrations" : "Sales");
@@ -175,6 +170,7 @@ function Dashboard({
   const host = useHostContext();
   const snapshot = useSnapshotMode();
   const compare = useCompare();
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [tab, setTab] = useQuery<Tab>("tab", "sales");
   const [rawPt, setPt] = useQuery<PeriodType>("pt", "month");
   const [mode, setMode] = useQuery<DisplayMode>("mode", "both");
@@ -250,15 +246,13 @@ function Dashboard({
           >
             ↻
           </button>
-          <a
+          <button
             className="btn accent upload"
-            href={UPLOAD_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Upload a SIAM or VAHAN source file to data/raw/incoming/ (opens GitHub — you're already signed in via Access)"
+            onClick={() => setUploadOpen(true)}
+            title="Upload a SIAM or VAHAN source file — pick the category, choose the file(s), done"
           >
             ↥ Upload data file
-          </a>
+          </button>
           <button className="btn export accent" onClick={() => window.print()} title="Export current view (print / PDF)">
             ↧ Export
           </button>
@@ -334,6 +328,7 @@ function Dashboard({
           right={<DockedCompareWorkspace />}
         />
       </main>
+      <UploadPanel open={uploadOpen} onClose={() => setUploadOpen(false)} />
     </div>
   );
 }

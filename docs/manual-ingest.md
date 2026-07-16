@@ -6,10 +6,11 @@ supported today, kept strictly separate (one source per table; never mixed):
 | Source | Basis | Frequency | Categories | Exports / Production |
 |---|---|---|---|---|
 | **SIAM** | wholesale **dispatches** | monthly (CV quarterly) | 2W · PV · 3W · CV | yes (exports; CV production) |
-| **VAHAN** | **registrations** | monthly | ALL vehicles (one tab) | **no** — registrations only |
+| **VAHAN** | **registrations** | monthly | ALL, or one class (2W · PV · 3W · CV) | **no** — registrations only |
 
 The dashboard shows each as its own tab; a VAHAN figure is never combined with a SIAM figure
-in one table or share.
+in one table or share. A category-filtered VAHAN export lands in its **own** VAHAN tab (VAHAN
+2W, VAHAN PV, …), separate again from the all-vehicles VAHAN tab.
 
 ---
 
@@ -21,78 +22,99 @@ From the vahan4dashboard "Report" page (`vahan.parivahan.gov.in/vahan4dashboard`
 1. **Maker Month Wise** — Y-axis *Maker*, X-axis *Month*. → per-manufacturer registrations.
 2. **Fuel Month Wise** — Y-axis *Fuel*, X-axis *Month*. → the EV-vs-ICE split.
 
-Each downloads as `reportTable.xlsx`. Rename them so both land in `incoming/` without
-clobbering (e.g. `VAHAN_Maker_2026.xlsx`, `VAHAN_Fuel_2026.xlsx`). Drop **both** — the
-adapter parses and gates them as one dataset: the maker file gives the makers + the reported
-universe total; the fuel file gives the EV split. Either alone still ingests (you just get
-makers-without-EV, or EV-without-makers).
+Each downloads as `reportTable.xlsx`. Upload **both** together — the adapter parses and gates
+them as one dataset: the maker file gives the makers + the reported universe total; the fuel
+file gives the EV split. Either alone still ingests (you just get makers-without-EV, or
+EV-without-makers).
 
-> The export is **all vehicle categories** combined (2W + PV + 3W + CV + tractors + …). The
-> adapter maps the significant makers (see `pipeline/dictionaries/companies.yaml`) and sums
-> the long tail of tiny/importer makers into the existing **Others** residual. EV = battery
-> electric only (`PURE EV` + `ELECTRIC(BOV)`); hybrids and hydrogen are **not** counted as EV.
-
-To scope a VAHAN tab to a single category (e.g. 2W), apply the **Vehicle Class** filter in
-VAHAN before exporting — the same adapter handles it; only the makers/fuels present change.
+> By default the export is **all vehicle categories** combined (2W + PV + 3W + CV + tractors +
+> …). To get a single-class tab (e.g. only 2W), apply the **Vehicle Class** filter in VAHAN
+> *before* exporting, and pick the matching class in the upload dropdown. The adapter maps the
+> significant makers (see `pipeline/dictionaries/companies.yaml`) and sums the long tail of
+> tiny/importer makers into the transparent **Others** residual. EV = battery electric only
+> (`PURE EV` + `ELECTRIC(BOV)`); hybrids and hydrogen are **not** counted as EV.
 
 ---
 
 ## Getting a file in — the "Upload data file" button
 
-The dashboard's **↥ Upload data file** button opens the GitHub web upload page for
-`data/raw/incoming/`. You are already authenticated (Cloudflare Access on the dashboard,
-your GitHub sign-in for the commit), so **no server-side token is needed**:
+The dashboard's **↥ Upload data file** button opens an upload panel **inside the dashboard** —
+no GitHub, no repo, nothing technical to see:
 
 1. Click **Upload data file**.
-2. Drag the SIAM workbook or the two VAHAN `reportTable` files onto the page.
-3. Commit to `main`.
-4. Run ingestion: **Actions → `ingest` → Run workflow** (or wait for the monthly cron).
+2. **Pick what the file is** from the dropdown:
+   - *SIAM workbook* — the monthly SIAM file (it auto-splits into 2W / PV / 3W / CV).
+   - *VAHAN — All vehicles*, or *2W / PV / 3W / CV* — match this to how you filtered the
+     export. This is what sends the data to the right VAHAN tab.
+3. **Choose the file(s).** For VAHAN, select **both** the Maker and the Fuel `reportTable`
+   files at once.
+4. Click **Upload**. You'll see "Uploaded — ingest is running"; the tab refreshes in a few
+   minutes.
 
-Ingestion parses → validates through the gates → on success writes a new
-`data/bundle/<key>.json` view (+ a manifest entry) and Cloudflare redeploys. On any failure
-the file is **quarantined** to `data/raw/quarantine/` and every last-good view stays live and
+Behind the scenes the panel hands the file to a small server-side helper (a Cloudflare Pages
+Function at `/api/upload`) that files it under `data/raw/incoming/` — stamping VAHAN files with
+the class you chose (`VAHAN-2W-…`, etc.) so the pipeline routes each to its own tab — and kicks
+ingestion. Ingestion parses → validates through the gates → on success writes a new
+`data/bundle/<key>.json` view (+ a manifest entry) and Cloudflare redeploys. On any failure the
+file is **quarantined** to `data/raw/quarantine/` and every last-good view stays live and
 unchanged — a bad drop never poisons the store or takes the dashboard down.
 
-### Optional: a Cloudflare Pages Function (fully in-dashboard upload)
+If the helper isn't set up yet (see next section), the panel says so and offers a **"Open the
+GitHub upload page"** link as a fallback — that flow needs no setup and works immediately.
 
-If you want the upload to happen entirely inside the dashboard (no GitHub tab), add a Pages
-Function that commits the file via the GitHub Contents API using a fine-grained PAT stored as
-a Cloudflare **secret** (`GITHUB_TOKEN`, scoped to this repo, `contents: write`). Sketch:
+---
 
-```js
-// functions/api/upload.js  (Cloudflare Pages Function; behind Cloudflare Access)
-export async function onRequestPost({ request, env }) {
-  const form = await request.formData();
-  const file = form.get("file");
-  if (!file) return new Response("no file", { status: 400 });
-  const path = `data/raw/incoming/${file.name.replace(/[^\w.\-]/g, "_")}`;
-  const content = btoa(String.fromCharCode(...new Uint8Array(await file.arrayBuffer())));
-  const api = `https://api.github.com/repos/techmuns/OEM-trends-tracker/contents/${path}`;
-  const r = await fetch(api, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-      "User-Agent": "oem-tracker-upload",
-      Accept: "application/vnd.github+json",
-    },
-    body: JSON.stringify({ message: `upload ${file.name}`, content, branch: "main" }),
-  });
-  return new Response(r.ok ? "uploaded" : await r.text(), { status: r.ok ? 200 : 502 });
-}
-```
+## One-time setup for the in-dashboard upload (about 5 minutes)
 
-Then point the button at `/api/upload` with a file input instead of the GitHub URL. This is
-optional — the button-to-GitHub flow above needs no infrastructure and is what ships by
-default.
+The in-dashboard upload needs one thing: a **key** that lets the dashboard save files to the
+repository on your behalf. You create the key once, paste it into Cloudflare once, and you're
+done — you'll never touch it again, and it never appears in anyone's browser.
+
+Think of it like a spare key you cut for a trusted helper: the helper (the dashboard) can drop
+new files in the mailbox (`data/raw/incoming/`), but the key lives locked in Cloudflare's
+settings, not on the doormat.
+
+**Step 1 — cut the key (on GitHub).**
+- Go to **GitHub → your photo (top-right) → Settings → Developer settings → Personal access
+  tokens → Fine-grained tokens → Generate new token**.
+- Name it `oem-tracker-upload`. Set **Expiration** to whatever you're comfortable with (e.g.
+  1 year — you'll just repeat these steps when it lapses).
+- Under **Repository access**, choose **Only select repositories** → pick
+  `techmuns/OEM-trends-tracker`.
+- Under **Permissions → Repository permissions**, set:
+  - **Contents** → **Read and write** (this lets it save the file).
+  - **Actions** → **Read and write** (optional — this lets an upload start ingestion right
+    away instead of waiting for the monthly run).
+- Click **Generate token** and **copy** the value (it starts with `github_pat_…`). You only
+  see it once.
+
+**Step 2 — hand the key to the dashboard (on Cloudflare).**
+- Go to **Cloudflare dashboard → Workers & Pages → your OEM-tracker Pages project → Settings →
+  Variables and Secrets** (older UI: *Environment variables*).
+- Add a **Secret** (not a plain variable) named exactly **`GITHUB_TOKEN`**, paste the value,
+  and save.
+- **Redeploy** the project (Deployments → … → Retry/redeploy the latest) so it picks up the
+  key.
+
+That's it. From now on the **Upload** button saves files straight from the dashboard. If you
+ever want to turn it off, delete the `GITHUB_TOKEN` secret — the panel automatically falls back
+to the GitHub link.
+
+> The key is stored as a Cloudflare **secret**: it's used only on Cloudflare's servers, is
+> write-masked in their dashboard, and is never sent to the browser. The Function itself lives
+> at `functions/api/upload.js` in this repo.
 
 ---
 
 ## Isolation guarantees (enforced, not just intended)
 
-- **One source per view.** VAHAN rows carry `source='VAHAN'`, `category='ALL'`; SIAM rows are
-  untouched. Each view is built from a single-source store (`data/normalized/<key>.json`).
-- **Dropping VAHAN never changes any SIAM output** — only new `vahan.*` files and one new
-  manifest entry appear. (Proven by checksum in the feature's verification.)
+- **One source per view.** VAHAN rows carry `source='VAHAN'`; SIAM rows are untouched. Each
+  view is built from a single-source store (`data/normalized/<key>.json`).
+- **One tab per dataset.** All-vehicles VAHAN, VAHAN 2W, VAHAN PV, VAHAN 3W and VAHAN CV each
+  have their own key, store, snapshot and view — a class-filtered upload can never land in the
+  wrong tab or in SIAM.
+- **Dropping VAHAN never changes any SIAM output** — only new `vahan*.*` files and manifest
+  entries appear. (Proven by checksum in the feature's verification.)
 - **Registrations ≠ dispatches.** The UI derives its labels from the source, so a VAHAN view
   reads "registrations" everywhere a SIAM view reads "wholesale dispatches", and never shows
   exports or production for VAHAN.

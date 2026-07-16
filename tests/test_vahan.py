@@ -12,6 +12,7 @@ import pytest
 
 from pipeline.adapters.vahan import VahanFileAdapter, VahanFileParseError
 from pipeline.build_view import build_view
+from pipeline.ingest import _vahan_category
 from pipeline.store.revisions import apply_revisions, current_rows
 
 MAKER = "fixtures/vahan/maker_sample.xlsx"
@@ -92,6 +93,31 @@ def test_view_is_single_source_registrations_no_export_or_production() -> None:
     # EV penetration = EV / total = 150000 / 910000 for JAN
     pen = view["ev_penetration"]["domestic"]["month"]["2026-01"]
     assert abs(pen - 150000 / 910000) < 1e-9
+
+
+def test_filename_category_token_routes_to_the_right_tab() -> None:
+    assert _vahan_category(Path("VAHAN-2W-maker.xlsx")) == "2W"
+    assert _vahan_category(Path("VAHAN_PV_fuel_2026.xlsx")) == "PV"
+    assert _vahan_category(Path("VAHAN2W_maker.xlsx")) == "2W"
+    assert _vahan_category(Path("VAHAN-CV-maker.xlsx")) == "CV"
+    # no token -> the unfiltered all-vehicle export
+    assert _vahan_category(Path("VAHAN_Maker_2026.xlsx")) == "ALL"
+    assert _vahan_category(Path("reportTable.xlsx")) == "ALL"
+
+
+def test_category_filtered_upload_gets_real_category_and_distinct_key() -> None:
+    # a VAHAN file the analyst filtered to 2W: rows are tagged category "2W" (a real vehicle
+    # category), stored under the distinct VAHAN2W tab — never touching the SIAM 2W view.
+    a = VahanFileAdapter([MAKER, FUEL], category="2W")
+    rows = a.parse(a.fetch("x"))
+    assert {r.category.value for r in rows} == {"2W"}
+    assert {r.source.value for r in rows} == {"VAHAN"}
+    store = current_rows(apply_revisions([], rows).rows)
+    view = build_view(store, META, "VAHAN2W")
+    assert view["meta"]["category"] == "VAHAN2W"
+    assert view["meta"]["source"] == "VAHAN"
+    assert "2W Registrations" in view["meta"]["category_label"]
+    assert "Hero MotoCorp" in view["companies"]
 
 
 def test_malformed_reporttable_raises(tmp_path: Path) -> None:

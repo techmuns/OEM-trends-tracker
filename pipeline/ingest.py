@@ -17,8 +17,10 @@ categories the UI can switch between.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -48,6 +50,25 @@ FILE1_SHEET = "OEM - Summary - 2W, PV, 3W"
 FILE2_SHEET = "Two Wheelers"
 VAHAN_SHEET = "reportTable"  # the vahan4dashboard "Report" download sheet
 
+# A VAHAN export carries no category column, so the uploader stamps it into the FILENAME
+# (VAHAN-2W-…, VAHAN_PV_…, or plain VAHAN…/VAHAN-ALL-… for the unfiltered all-vehicle export).
+# That token routes the file to its own tab/view — 2W registrations never touch the SIAM 2W
+# view, and each VAHAN category is a distinct store/view/manifest key.
+VAHAN_VIEW_KEYS = {
+    "ALL": "VAHAN",
+    "2W": "VAHAN2W",
+    "PV": "VAHANPV",
+    "3W": "VAHAN3W",
+    "CV": "VAHANCV",
+}
+
+
+def _vahan_category(path: Path) -> str:
+    """The vehicle category a VAHAN file was filtered to, read from its filename token.
+    (Uses a non-alphanumeric lookahead, not \\b, so 'VAHAN_PV_…' matches — '_' is a word char.)"""
+    m = re.search(r"VAHAN[-_ ]?(ALL|2W|PV|3W|CV)(?![A-Za-z0-9])", path.stem, re.IGNORECASE)
+    return m.group(1).upper() if m else "ALL"
+
 
 def detect_adapters(path: Path, ts: datetime) -> list[tuple[str, SourceAdapter]]:
     """Return the (category, adapter) pairs for a workbook — by sheet fingerprint."""
@@ -68,9 +89,10 @@ def detect_adapters(path: Path, ts: datetime) -> list[tuple[str, SourceAdapter]]
     if FILE2_SHEET in sheets and "Passenger Vehicle" in sheets:
         return [("2W", SiamMonthlyAdapter(path, ingest_date=ts))]
     # VAHAN registrations export (maker-wise OR fuel-wise) — its own SEPARATE tab, never a
-    # SIAM category. The adapter self-detects maker vs fuel and reconciles both into one view.
+    # SIAM category. The adapter self-detects maker vs fuel; the filename token picks the tab.
     if VAHAN_SHEET in sheets:
-        return [("VAHAN", VahanFileAdapter(path, ingest_date=ts))]
+        cat = _vahan_category(path)
+        return [(VAHAN_VIEW_KEYS[cat], VahanFileAdapter(path, ingest_date=ts, category=cat))]
     return []
 
 
@@ -235,20 +257,22 @@ def _is_vahan(path: Path) -> bool:
         return False
 
 
-def _process_vahan_batch(paths: list[Path], ts: datetime) -> int:
-    """The maker-wise and fuel-wise exports are ONE dataset — parse and gate them together,
-    so complementary files never look like a huge row delta relative to each other."""
-    print(f"[ingest] VAHAN batch: {[p.name for p in paths]}")
-    adapter = VahanFileAdapter([str(p) for p in paths], ingest_date=ts)
+def _process_vahan_batch(paths: list[Path], category: str, ts: datetime) -> int:
+    """One VAHAN category's files (maker-wise + fuel-wise) are ONE dataset — parse and gate
+    them together, so complementary files never look like a huge row delta relative to each
+    other. `category` (from the filenames) routes them to their own view/store."""
+    view_key = VAHAN_VIEW_KEYS[category]
+    print(f"[ingest] VAHAN[{category}] -> {view_key} batch: {[p.name for p in paths]}")
+    adapter = VahanFileAdapter([str(p) for p in paths], ingest_date=ts, category=category)
     try:
-        failed = process_category("VAHAN", adapter, ts) != 0
+        failed = process_category(view_key, adapter, ts) != 0
     except Exception as e:  # noqa: BLE001 - parse/resolve error -> quarantine the whole batch
         for p in paths:
-            _quarantine(p, f"VAHAN: {type(e).__name__}: {e}")
+            _quarantine(p, f"{view_key}: {type(e).__name__}: {e}")
         return 1
     if failed:
         for p in paths:
-            _quarantine(p, "VAHAN gates failed")
+            _quarantine(p, f"{view_key} gates failed")
         return 1
     _rebuild_manifest()
     for p in paths:
@@ -266,8 +290,12 @@ def run_incoming(incoming_dir: Path = INCOMING_DIR, ts: datetime = INGEST_TS) ->
     worst = 0
     for path in other_files:
         worst = max(worst, process_file(path, ts))
-    if vahan_files:
-        worst = max(worst, _process_vahan_batch(vahan_files, ts))
+    # group VAHAN files by their filename category token; each category ingests independently
+    by_cat: dict[str, list[Path]] = defaultdict(list)
+    for f in vahan_files:
+        by_cat[_vahan_category(f)].append(f)
+    for category, paths in sorted(by_cat.items()):
+        worst = max(worst, _process_vahan_batch(paths, category, ts))
     return worst
 
 

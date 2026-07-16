@@ -45,6 +45,39 @@ categories:
     has_ev: true
     has_production: false
 
+  # Per-category VAHAN tabs — used when the analyst exports VAHAN filtered to one Vehicle
+  # Class. Each is a distinct store/view/manifest key; row_category is a REAL vehicle category
+  # so the rows sit in their own VAHAN store (source=VAHAN) and never touch the SIAM tab of
+  # the same name. They appear in the dashboard only once such a file has been ingested.
+  VAHAN2W:
+    label: 2W Registrations · VAHAN
+    source: VAHAN
+    native_frequency: month
+    row_category: "2W"
+    has_ev: true
+    has_production: false
+  VAHANPV:
+    label: PV Registrations · VAHAN
+    source: VAHAN
+    native_frequency: month
+    row_category: PV
+    has_ev: true
+    has_production: false
+  VAHAN3W:
+    label: 3W Registrations · VAHAN
+    source: VAHAN
+    native_frequency: month
+    row_category: "3W"
+    has_ev: true
+    has_production: false
+  VAHANCV:
+    label: CV Registrations · VAHAN
+    source: VAHAN
+    native_frequency: month
+    row_category: CV
+    has_ev: true
+    has_production: false
+
   PV:
     label: Passenger Vehicles
     source: SIAM

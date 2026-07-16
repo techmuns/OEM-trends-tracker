@@ -1394,6 +1394,124 @@ button.title.as-home:focus-visible {
   font-family: inherit;
 }
 
+/* --- upload panel (modal) --- */
+.ovl {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(3, 5, 9, 0.6);
+  backdrop-filter: blur(2px);
+}
+.upl {
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px 18px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+.upl-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.upl-h b {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.upl-x {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.upl-x:hover {
+  color: var(--text-primary);
+}
+.upl-l {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.upl select {
+  width: 100%;
+}
+.upl input[type="file"] {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.upl input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  padding: 4px 10px;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.upl-note {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  background: var(--blue-tint);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+.upl-files {
+  font-size: 11px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+.upl-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.upl-status {
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.upl-status.busy {
+  color: var(--text-secondary);
+  background: var(--surface-2);
+}
+.upl-status.ok {
+  color: var(--positive);
+  background: var(--positive-soft);
+  border-color: rgba(79, 183, 131, 0.3);
+}
+.upl-status.err {
+  color: var(--negative);
+  background: var(--negative-soft);
+  border-color: rgba(224, 107, 98, 0.3);
+}
+.upl-alt {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.upl-alt a {
+  color: var(--accent);
+}
+
 /* --- empty drop zone --- */
 .cmp-empty {
   flex: 1;
