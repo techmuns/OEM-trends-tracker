@@ -17,7 +17,12 @@ from pipeline.contract.constants import INDUSTRY_TOTAL_CANONICAL
 from pipeline.dictionaries.loader import load_company_resolver
 from pipeline.validate.gates import GateContext, TotalsReconciliationGate
 
-META = {"generated_at": "2026-07-15T10:00:00+05:30", "source": "SIAM", "snapshot_id": None, "notes": None}
+META = {
+    "generated_at": "2026-07-15T10:00:00+05:30",
+    "source": "SIAM",
+    "snapshot_id": None,
+    "notes": None,
+}
 
 
 def test_every_3w_row_is_powertrain_all(real_parse_3w) -> None:

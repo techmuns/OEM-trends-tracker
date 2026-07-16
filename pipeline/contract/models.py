@@ -62,7 +62,7 @@ class PeriodType(StrEnum):
 
 class Category(StrEnum):
     """
-    Vehicle category. A dimension, never an assumption. v1 seeds 2W but the contract holds all.
+    Vehicle category. A dimension, never an assumption. v1 seeds 2W but the contract holds all. 'ALL' = every vehicle category combined in one reported universe (used by VAHAN all-India registrations, which the source reports across all categories at once); a backward-compatible enum extension, so contract_version stays 1.1.0.
     """
 
     field_2W = '2W'
@@ -70,6 +70,7 @@ class Category(StrEnum):
     field_3W = '3W'
     TRACTOR = 'TRACTOR'
     CV = 'CV'
+    ALL = 'ALL'
 
 
 class Flow(StrEnum):
@@ -161,7 +162,7 @@ class ContractRow(BaseModel):
     )
     category: Category = Field(
         ...,
-        description='Vehicle category. A dimension, never an assumption. v1 seeds 2W but the contract holds all.',
+        description="Vehicle category. A dimension, never an assumption. v1 seeds 2W but the contract holds all. 'ALL' = every vehicle category combined in one reported universe (used by VAHAN all-India registrations, which the source reports across all categories at once); a backward-compatible enum extension, so contract_version stays 1.1.0.",
     )
     segment: str | None = Field(
         ...,

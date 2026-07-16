@@ -98,9 +98,6 @@ def test_pv_view_declares_ev_unavailable(real_parse_pv) -> None:
     assert "Mahindra Electric Mobility" in v["meta"]["ev_only_makers"]
     # ev_penetration carries no real numbers — every leaf is null (EV not derivable)
     leaves = [
-        val
-        for flow in v["ev_penetration"].values()
-        for pt in flow.values()
-        for val in pt.values()
+        val for flow in v["ev_penetration"].values() for pt in flow.values() for val in pt.values()
     ]
     assert leaves and all(val is None for val in leaves)

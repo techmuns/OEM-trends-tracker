@@ -32,6 +32,19 @@ categories:
     has_ev: true
     has_production: false # 2W production is only in File 2 (added in Phase 2)
 
+  # VAHAN registrations — a SEPARATE tab, not a SIAM category. `row_category: ALL` keeps its
+  # store/manifest/view key ("VAHAN") distinct from every SIAM category while filtering the
+  # all-vehicle rows (ContractRow.category="ALL"). Registrations, not dispatches; all-India;
+  # no exports/production. has_ev/has_production here are documentation — build_view derives
+  # them from the data (industry EV from the fuel-wise export).
+  VAHAN:
+    label: India Registrations · VAHAN
+    source: VAHAN
+    native_frequency: month
+    row_category: ALL
+    has_ev: true
+    has_production: false
+
   PV:
     label: Passenger Vehicles
     source: SIAM

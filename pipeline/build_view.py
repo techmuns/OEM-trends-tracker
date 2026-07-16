@@ -309,7 +309,9 @@ def main() -> int:
             continue
         v = write_view(rows, meta_src, category)
         views.append(v)
-        print(f"[build_view] {category}: {len(v['series'])} series, latest={v['meta']['latest_period']}")
+        print(
+            f"[build_view] {category}: {len(v['series'])} series, latest={v['meta']['latest_period']}"
+        )
     if views:
         write_manifest(views)
         print(f"[build_view] manifest: {[v['meta']['category'] for v in views]}")

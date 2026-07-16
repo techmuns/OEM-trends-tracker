@@ -39,6 +39,26 @@ const ICE_LINE = "var(--ice)";
 // Distinct default line colours by rank: primary blue, secondary blue, muted slate.
 const RANK_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)"];
 
+// Measurement basis is DERIVED from the source, so a VAHAN view reads "registrations"
+// everywhere a SIAM view reads "wholesale dispatches" — the two are never conflated.
+const BASIS_LABEL: Record<string, string> = {
+  SIAM: "wholesale dispatches",
+  VAHAN: "registrations",
+  BROKER: "broker estimates",
+  MANUAL: "manual entries",
+};
+const basisOf = (view: ViewModel): string => BASIS_LABEL[view.meta.source] ?? "reported volumes";
+
+// "Upload data file" opens the GitHub web upload for the watched drop folder — the analyst is
+// already authenticated (Cloudflare Access on the dashboard, GitHub sign-in for the commit),
+// so no server-side token is needed. The dropped file is ingested by the ingest workflow.
+// (An optional Cloudflare Pages Function alternative is documented in docs/manual-ingest.md.)
+const UPLOAD_URL = "https://github.com/techmuns/OEM-trends-tracker/upload/main/data/raw/incoming";
+const isRegs = (view: ViewModel): boolean => view.meta.source === "VAHAN";
+// The primary-metric noun: SIAM = "Sales", VAHAN = "Registrations".
+const flowNoun = (view: ViewModel): string => (isRegs(view) ? "Registrations" : "Sales");
+const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
 export function App() {
   // Compare state lives ABOVE the category loader so the workspace survives category and page
   // switches within a session.
@@ -178,7 +198,7 @@ function Dashboard({
   }, [period, periodKey, setPeriodKey]);
 
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "sales", label: "Sales & Market Share", icon: <IconBars /> },
+    { id: "sales", label: `${flowNoun(view)} & Market Share`, icon: <IconBars /> },
     { id: "ev", label: "EV vs ICE", icon: <IconBolt /> },
     { id: "prod", label: "Production & Exports", icon: <IconFactory /> },
   ];
@@ -216,8 +236,10 @@ function Dashboard({
             title="Metric"
             aria-label="Metric"
           >
-            <option value="sales">Sales</option>
-            <option value="exports">Exports</option>
+            <option value="sales">{flowNoun(view)}</option>
+            <option value="exports" disabled={isRegs(view)}>
+              Exports
+            </option>
             <option value="ev">EV</option>
           </select>
           <button
@@ -228,6 +250,15 @@ function Dashboard({
           >
             ↻
           </button>
+          <a
+            className="btn accent upload"
+            href={UPLOAD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Upload a SIAM or VAHAN source file to data/raw/incoming/ (opens GitHub — you're already signed in via Access)"
+          >
+            ↥ Upload data file
+          </a>
           <button className="btn export accent" onClick={() => window.print()} title="Export current view (print / PDF)">
             ↧ Export
           </button>
@@ -793,8 +824,8 @@ function SalesTab({
 
   const colCompany = oem || rows[0]?.company;
   const table: TableConfig = {
-    title: `OEM Sales & Share Snapshot — ${period.label} vs ${priorL}`,
-    subtitle: "Wholesale dispatches · SIAM reported universe",
+    title: `OEM ${flowNoun(view)} & Share Snapshot — ${period.label} vs ${priorL}`,
+    subtitle: `${cap(basisOf(view))} · ${view.meta.source} reported universe`,
     rows,
     total,
     curLabel: period.label,
@@ -809,9 +840,9 @@ function SalesTab({
   };
   const chart: ChartConfig = {
     title: `Market Share Trend — ${oem ? shortName(oem) : "Top OEMs"}`,
-    info: "Market share is calculated within the reported SIAM wholesale-dispatch universe. It may not represent the complete retail market.",
-    subtitle: "How each OEM's share within the reported SIAM universe has changed over time.",
-    footer: "Source: SIAM wholesale dispatches · share within reported SIAM universe",
+    info: `Market share is calculated within the reported ${view.meta.source} ${basisOf(view)} universe. It may not represent the complete market.`,
+    subtitle: `How each OEM's share within the reported ${view.meta.source} universe has changed over time.`,
+    footer: `Source: ${view.meta.source} ${basisOf(view)} · ${view.meta.source_universe_label.toLowerCase()}`,
     lines: trendLines,
     valueKind: "share",
     yLabel: "Market share (%)",
@@ -827,11 +858,11 @@ function SalesTab({
     <>
       <div className="kpis">
         <Kpi
-          label="Total Industry Sales"
+          label={isRegs(view) ? "Total Registrations" : "Total Industry Sales"}
           value={fmtUnitsCompact(industry?.v)}
           cmp={yoyNode(industry)}
           scope={period.label}
-          caveat="Total wholesale dispatches within the reported SIAM universe (not the whole market)."
+          caveat={`Total ${basisOf(view)} within the reported ${view.meta.source} universe (not the whole market).`}
           compare={{ make: () => mk(TOTAL, "sales"), add: compare.add }}
         />
         {oem ? (
@@ -1061,9 +1092,9 @@ function EvTab({
   } else {
     chart = {
       title: "EV Penetration Trend — EV vs ICE",
-      info: "EV penetration is EV volume as a share of the total reported 2W universe (SIAM). It may understate EV because some pure-EV makers are outside SIAM.",
-      subtitle: `Share of reported ${view.meta.category} universe · to ${evPeriod.label}`,
-      footer: "EV = blue accent · ICE = muted blue-grey · EV penetration within reported SIAM universe",
+      info: `EV penetration is EV ${basisOf(view)} as a share of the total reported ${view.meta.source} universe.${isRegs(view) ? " Battery-electric only (PURE EV + ELECTRIC BOV); hybrids and hydrogen are not counted as EV." : " It may understate EV because some pure-EV makers are outside SIAM."}`,
+      subtitle: `Share of reported ${view.meta.category_label} universe · to ${evPeriod.label}`,
+      footer: `EV = blue accent · ICE = muted blue-grey · EV penetration within reported ${view.meta.source} universe`,
       lines: evIceLines(view, TOTAL, pt, winAxis, evAxis),
       valueKind: "share",
       yLabel: "Penetration (%)",
@@ -1117,8 +1148,12 @@ function EvTab({
           label="EV Penetration"
           value={fmtShare(pen)}
           cmp={pen != null && penPrior != null ? <Delta text={`${fmtPp(pen - penPrior)} YoY`} dir={deltaDir(pen - penPrior)} /> : undefined}
-          scope="within reported SIAM universe"
-          caveat="EV penetration within reported SIAM universe. Pure-EV makers outside SIAM are excluded, so this understates EV."
+          scope={`within reported ${view.meta.source} universe`}
+          caveat={
+            isRegs(view)
+              ? "EV penetration within the reported VAHAN registrations universe. Battery-electric only (PURE EV + ELECTRIC BOV); hybrids and hydrogen are not counted as EV."
+              : "EV penetration within reported SIAM universe. Pure-EV makers outside SIAM are excluded, so this understates EV."
+          }
           compare={{ make: () => mk("Industry", "ev_penetration"), add: compare.add }}
         />
         <Kpi label="ICE Volume" value={fmtUnitsCompact(ice.v)} scope={evPeriod.label} />
@@ -1171,6 +1206,19 @@ function ProdTab({
   const axis = view.periods[pt];
   const TOTAL = view.meta.industry_total_label;
   const key = period.key;
+
+  // A registrations source (VAHAN) reports neither exports nor production. Say so plainly
+  // instead of rendering an empty table + unavailable production side by side.
+  const hasExports = view.flows.includes("export");
+  const prodNative = view.meta.has_production && view.meta.native_frequency === "quarter";
+  if (!hasExports && !prodNative) {
+    return (
+      <Unavailable title={`Exports & production are not reported by ${view.meta.source}`}>
+        {view.meta.source} reports {basisOf(view)} only — there is no export or production basis in this source. Use
+        the {flowNoun(view)} &amp; Market Share and EV vs ICE tabs for {view.meta.category_label}.
+      </Unavailable>
+    );
+  }
   const priorL = labelFor(axis, priorKey(pt, key));
   const expInd = pick(view, TOTAL, "export", "all", pt, key);
   const exp = buildTable(view, { flow: "export", powertrain: "all", periodType: pt, periodKey: key, totalLabel: TOTAL });
@@ -1374,7 +1422,7 @@ function Provenance({ view }: { view: ViewModel }) {
         <dl className="prov">
           <div>
             <dt>Source</dt>
-            <dd>{m.source} — wholesale dispatches</dd>
+            <dd>{m.source} — {basisOf(view)}</dd>
           </div>
           <div>
             <dt>Reported universe</dt>

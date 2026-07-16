@@ -141,7 +141,9 @@ class CvQuarterlyAdapter(SourceAdapter):
         for col, fq in quarter_cols.items():
             v = ws.cell(row=total_row, column=col).value
             if isinstance(v, (int, float)) and v < 0:
-                self.warnings.append(f"CV: dropped unfinalized quarter {fq} (domestic total {v:.0f} < 0)")
+                self.warnings.append(
+                    f"CV: dropped unfinalized quarter {fq} (domestic total {v:.0f} < 0)"
+                )
                 continue
             kept[col] = fq
         return kept
@@ -155,7 +157,9 @@ class CvQuarterlyAdapter(SourceAdapter):
 
     def _parse_region(self, ws, flow, start_row, end_row, quarter_cols) -> list[ContractRow]:
         co = load_company_resolver()
-        seg_map = {h: (spec["segment"], spec["terminator"]) for h, spec in self.cfg["segments"].items()}
+        seg_map = {
+            h: (spec["segment"], spec["terminator"]) for h, spec in self.cfg["segments"].items()
+        }
         terminators = {t for (_s, t) in seg_map.values()}
         industry_total = self.cfg["industry_total"]
         skip_rows = set(self.cfg.get("skip_rows", []))
@@ -172,8 +176,16 @@ class CvQuarterlyAdapter(SourceAdapter):
                 cur_seg, cur_term = seg_map[label]
                 continue
             if label == industry_total:
-                rows += self._emit(ws, r, flow, None, INDUSTRY_TOTAL_CANONICAL, label,
-                                   quarter_cols, record_industry=True)
+                rows += self._emit(
+                    ws,
+                    r,
+                    flow,
+                    None,
+                    INDUSTRY_TOTAL_CANONICAL,
+                    label,
+                    quarter_cols,
+                    record_industry=True,
+                )
                 cur_seg = cur_term = None
                 continue
             if cur_term is not None and label == cur_term:
@@ -183,7 +195,9 @@ class CvQuarterlyAdapter(SourceAdapter):
             if label in terminators or label in skip_rows:
                 continue  # a closed segment's terminator, or an intermediate subtotal
             if cur_seg is None:
-                self.warnings.append(f"CV/{flow}: skipped label outside a segment at row {r}: {label!r}")
+                self.warnings.append(
+                    f"CV/{flow}: skipped label outside a segment at row {r}: {label!r}"
+                )
                 continue
             try:
                 canonical = co.resolve(label)
@@ -192,8 +206,9 @@ class CvQuarterlyAdapter(SourceAdapter):
             rows += self._emit(ws, r, flow, cur_seg, canonical, label, quarter_cols)
         return rows
 
-    def _emit(self, ws, row, flow, segment, canonical, raw, quarter_cols,
-              record_industry=False) -> list[ContractRow]:
+    def _emit(
+        self, ws, row, flow, segment, canonical, raw, quarter_cols, record_industry=False
+    ) -> list[ContractRow]:
         out: list[ContractRow] = []
         for col, fq in quarter_cols.items():
             v = ws.cell(row=row, column=col).value
@@ -217,12 +232,31 @@ class CvQuarterlyAdapter(SourceAdapter):
 
     def _row(self, d, fq, flow, segment, canonical, raw, value) -> ContractRow:
         return ContractRow(
-            period_date=d, period_type="quarter", fiscal_year=fq[2:], fiscal_quarter=fq,
-            category=self.category, segment=segment, sub_segment=None,
-            company_canonical=canonical, company_raw=raw, flow=flow, powertrain="all",
-            geography="IN", metric="units", value=value, unit="units", source=self.source_id,
-            source_file=Path(self.source_file).name, source_period=self.source_period,
-            native_frequency="quarter", calc_status="reported", revision=0,
-            ingest_date=self.ingest_date, confidence="high", is_superseded=False,
-            is_partial=False, periods_present=None, periods_expected=None,
+            period_date=d,
+            period_type="quarter",
+            fiscal_year=fq[2:],
+            fiscal_quarter=fq,
+            category=self.category,
+            segment=segment,
+            sub_segment=None,
+            company_canonical=canonical,
+            company_raw=raw,
+            flow=flow,
+            powertrain="all",
+            geography="IN",
+            metric="units",
+            value=value,
+            unit="units",
+            source=self.source_id,
+            source_file=Path(self.source_file).name,
+            source_period=self.source_period,
+            native_frequency="quarter",
+            calc_status="reported",
+            revision=0,
+            ingest_date=self.ingest_date,
+            confidence="high",
+            is_superseded=False,
+            is_partial=False,
+            periods_present=None,
+            periods_expected=None,
         )

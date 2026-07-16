@@ -8,12 +8,12 @@ from pipeline.adapters.base import RawPayload, SourceAdapter, ValidationResult
 from pipeline.adapters.excel_spark import ExcelSparkAdapter
 from pipeline.adapters.siam_monthly import SiamMonthlyAdapter
 from pipeline.adapters.siam_scrape import SiamScrapeAdapter
-from pipeline.adapters.vahan import VahanAdapter
+from pipeline.adapters.vahan import VahanFileAdapter
 
-# Stubs still raising NotImplementedError. excel_spark (Phase 1) and siam_monthly (Phase 2)
-# are implemented; the SIAM scraper and VAHAN stay stubs.
-STUB_ADAPTERS = [SiamScrapeAdapter, VahanAdapter]
-ALL_ADAPTERS = [ExcelSparkAdapter, SiamMonthlyAdapter, SiamScrapeAdapter, VahanAdapter]
+# excel_spark (Phase 1), siam_monthly (Phase 2) and the VAHAN file adapter are implemented;
+# only the live SIAM scraper stays a stub (the manual file-drop replaces live scraping).
+STUB_ADAPTERS = [SiamScrapeAdapter]
+ALL_ADAPTERS = [ExcelSparkAdapter, SiamMonthlyAdapter, SiamScrapeAdapter, VahanFileAdapter]
 
 
 def test_abc_cannot_be_instantiated() -> None:

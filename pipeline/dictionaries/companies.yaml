@@ -252,3 +252,80 @@ companies:
   - canonical: Volvo Group India
     category_hint: CV
     aliases: [Volvo Group India Pvt Ltd]
+
+  # --- VAHAN registrations (all-India, ALL vehicle categories) ---
+  # VAHAN is a DIFFERENT source (registrations, not SIAM dispatches) and names makers
+  # differently — UPPERCASE full legal names, often split into several lines per group
+  # (Tata PV / EV / trucks; Mahindra auto / tractor / last-mile). Strings below are the
+  # EXACT maker labels from the vahan4dashboard "Maker Month Wise" export, whitespace-
+  # collapsed to match the adapter's cleaning. Several lines map to one canonical so the
+  # maker view shows the GROUP. The all-vehicle export's long tail is summed into "Others"
+  # by the adapter (not aliased here). Ola Electric etc. are makers PRESENT in VAHAN and
+  # ABSENT from SIAM — the concrete reason the two sources must never share a table.
+  - canonical: Ola Electric
+    category_hint: 2W
+    is_ev_only: true
+    aliases: [OLA ELECTRIC TECHNOLOGIES PVT LTD]
+  - canonical: Greaves Electric Mobility
+    category_hint: 2W
+    is_ev_only: true # Ampere / Greaves — electric 2W
+    aliases: [GREAVES ELECTRIC MOBILITY LTD]
+  - canonical: International Tractors
+    category_hint: TRACTOR
+    aliases: [INTERNATIONAL TRACTORS LIMITED] # Sonalika
+  - canonical: TAFE
+    category_hint: TRACTOR
+    aliases: [TAFE LIMITED] # Tractors and Farm Equipment
+  - canonical: Escorts Kubota
+    category_hint: TRACTOR
+    aliases: [ESCORTS KUBOTA LIMITED (AGRI MACHINERY GROUP)]
+  - canonical: John Deere India
+    category_hint: TRACTOR
+    aliases: [JOHN DEERE INDIA PVT LTD(TRACTOR DEVISION)] # source label incl. its 'DEVISION' typo
+  - canonical: Skoda Auto Volkswagen India
+    category_hint: PV
+    aliases: [SKODA AUTO VOLKSWAGEN INDIA PVT LTD]
+  # UPPERCASE VAHAN aliases onto existing canonicals (distinct strings from the SIAM aliases):
+  - canonical: Hero MotoCorp
+    aliases: [HERO MOTOCORP LTD]
+  - canonical: Honda Motorcycle & Scooter India
+    aliases: [HONDA MOTORCYCLE AND SCOOTER INDIA (P) LTD]
+  - canonical: TVS Motor Company
+    aliases: [TVS MOTOR COMPANY LTD]
+  - canonical: Bajaj Auto
+    aliases: [BAJAJ AUTO LTD]
+  - canonical: Maruti Suzuki India
+    aliases: [MARUTI SUZUKI INDIA LTD]
+  - canonical: Suzuki Motorcycle India
+    aliases: [SUZUKI MOTORCYCLE INDIA PVT LTD]
+  - canonical: Royal Enfield
+    aliases: [ROYAL-ENFIELD (UNIT OF EICHER LTD)]
+  - canonical: Mahindra & Mahindra
+    aliases:
+      - MAHINDRA & MAHINDRA LIMITED
+      - MAHINDRA & MAHINDRA LIMITED (TRACTOR)
+      - MAHINDRA & MAHINDRA LIMITED (SWARAJ DIVISION)
+      - MAHINDRA LAST MILE MOBILITY LTD
+  - canonical: India Yamaha Motor
+    aliases: [INDIA YAMAHA MOTOR PVT LTD]
+  - canonical: Hyundai Motor India
+    aliases: [HYUNDAI MOTOR INDIA LTD]
+  - canonical: Tata Motors
+    aliases:
+      - TATA MOTORS LTD
+      - TATA MOTORS PASSENGER VEHICLES LTD
+      - TATA PASSENGER ELECTRIC MOBILITY LTD
+  - canonical: Toyota Kirloskar Motor
+    aliases: [TOYOTA KIRLOSKAR MOTOR PVT LTD]
+  - canonical: Ather Energy
+    aliases: [ATHER ENERGY LTD]
+  - canonical: Kia Motors
+    aliases: [KIA INDIA PRIVATE LIMITED]
+  - canonical: Ashok Leyland
+    aliases: [ASHOK LEYLAND LTD]
+  - canonical: Piaggio Vehicles
+    aliases: [PIAGGIO VEHICLES PVT LTD]
+  - canonical: MG Motor India
+    aliases: [JSW MG MOTOR INDIA PVT LTD]
+  - canonical: VECV-Eicher
+    aliases: [VE COMMERCIAL VEHICLES LTD]

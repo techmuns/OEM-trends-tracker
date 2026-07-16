@@ -29,6 +29,7 @@ from pipeline.adapters.excel_cv import CvQuarterlyAdapter
 from pipeline.adapters.excel_nested import NestedBlockAdapter
 from pipeline.adapters.excel_spark import ExcelSparkAdapter
 from pipeline.adapters.siam_monthly import SiamMonthlyAdapter
+from pipeline.adapters.vahan import VahanFileAdapter
 from pipeline.build_bundle import build_bundle
 from pipeline.build_view import BUNDLE_DIR, write_manifest, write_view
 from pipeline.contract.constants import FILE1_LAST_PERIOD
@@ -45,6 +46,7 @@ INGEST_TS = datetime(2026, 7, 15, 10, 0, tzinfo=_IST)
 
 FILE1_SHEET = "OEM - Summary - 2W, PV, 3W"
 FILE2_SHEET = "Two Wheelers"
+VAHAN_SHEET = "reportTable"  # the vahan4dashboard "Report" download sheet
 
 
 def detect_adapters(path: Path, ts: datetime) -> list[tuple[str, SourceAdapter]]:
@@ -65,6 +67,10 @@ def detect_adapters(path: Path, ts: datetime) -> list[tuple[str, SourceAdapter]]
         return adapters
     if FILE2_SHEET in sheets and "Passenger Vehicle" in sheets:
         return [("2W", SiamMonthlyAdapter(path, ingest_date=ts))]
+    # VAHAN registrations export (maker-wise OR fuel-wise) — its own SEPARATE tab, never a
+    # SIAM category. The adapter self-detects maker vs fuel and reconciles both into one view.
+    if VAHAN_SHEET in sheets:
+        return [("VAHAN", VahanFileAdapter(path, ingest_date=ts))]
     return []
 
 
@@ -129,35 +135,61 @@ def process_category(category: str, adapter: SourceAdapter, ts: datetime) -> int
         if r.status.value != "skip":
             print(f"      {r.name}: {r.status.value} — {r.message}")
     if not report.accepted:
-        print(f"[ingest] {category}: FAILED — " + "; ".join(f"{f.name}: {f.message}" for f in report.failures), file=sys.stderr)
+        print(
+            f"[ingest] {category}: FAILED — "
+            + "; ".join(f"{f.name}: {f.message}" for f in report.failures),
+            file=sys.stderr,
+        )
         return 1
 
     save_normalized(category, store_rows)
     write_snapshot(store_rows, ts, category=category)
     build_bundle(
-        store_rows, generated_at=ts, source=source, category=category,
-        snapshot_id=snapshot_id(ts), notes=_notes(category, live, source),
+        store_rows,
+        generated_at=ts,
+        source=source,
+        category=category,
+        snapshot_id=snapshot_id(ts),
+        notes=_notes(category, live, source),
         bundle_path=BUNDLE_DIR / f"bundle-{category.lower()}.json",
     )
     write_view(
         store_rows,
-        {"generated_at": ts.isoformat(), "source": source, "snapshot_id": snapshot_id(ts),
-         "notes": _notes(category, live, source)},
+        {
+            "generated_at": ts.isoformat(),
+            "source": source,
+            "snapshot_id": snapshot_id(ts),
+            "notes": _notes(category, live, source),
+        },
         category,
     )
-    print(f"[ingest] {category}: accepted. added={len(outcome.added_keys)} "
-          f"revised={len(outcome.revised_keys)} latest={max(r.period_date for r in live)}")
+    print(
+        f"[ingest] {category}: accepted. added={len(outcome.added_keys)} "
+        f"revised={len(outcome.revised_keys)} latest={max(r.period_date for r in live)}"
+    )
     return 0
 
 
 def process_file(path: Path, ts: datetime = INGEST_TS) -> int:
-    adapters = detect_adapters(path, ts)
+    # A bad file must never crash the run nor poison the store: any failure (unreadable
+    # workbook, parse error, unresolved maker, gate rejection) quarantines the file and
+    # leaves every last-good view untouched.
+    try:
+        adapters = detect_adapters(path, ts)
+    except Exception as e:  # noqa: BLE001 - defensive: an unreadable/corrupt workbook
+        _quarantine(path, f"unreadable workbook: {type(e).__name__}: {e}")
+        return 1
     if not adapters:
         _quarantine(path, "unrecognized workbook (no known category sheet)")
         return 1
     print(f"[ingest] {path.name}: categories {[c for c, _a in adapters]}")
     for category, adapter in adapters:
-        if process_category(category, adapter, ts) != 0:
+        try:
+            failed = process_category(category, adapter, ts) != 0
+        except Exception as e:  # noqa: BLE001 - parse/resolve error -> quarantine, don't crash
+            _quarantine(path, f"{category}: {type(e).__name__}: {e}")
+            return 1
+        if failed:
             _quarantine(path, f"{category} gates failed")
             return 1
     _rebuild_manifest()
@@ -192,14 +224,50 @@ def _quarantine(path: Path, reason: str) -> None:
     print("[ingest] last good views left untouched.", file=sys.stderr)
 
 
+def _is_vahan(path: Path) -> bool:
+    try:
+        wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+        try:
+            return VAHAN_SHEET in set(wb.sheetnames)
+        finally:
+            wb.close()
+    except Exception:  # noqa: BLE001 - unreadable -> not VAHAN; process_file will quarantine
+        return False
+
+
+def _process_vahan_batch(paths: list[Path], ts: datetime) -> int:
+    """The maker-wise and fuel-wise exports are ONE dataset — parse and gate them together,
+    so complementary files never look like a huge row delta relative to each other."""
+    print(f"[ingest] VAHAN batch: {[p.name for p in paths]}")
+    adapter = VahanFileAdapter([str(p) for p in paths], ingest_date=ts)
+    try:
+        failed = process_category("VAHAN", adapter, ts) != 0
+    except Exception as e:  # noqa: BLE001 - parse/resolve error -> quarantine the whole batch
+        for p in paths:
+            _quarantine(p, f"VAHAN: {type(e).__name__}: {e}")
+        return 1
+    if failed:
+        for p in paths:
+            _quarantine(p, "VAHAN gates failed")
+        return 1
+    _rebuild_manifest()
+    for p in paths:
+        _archive(p)
+    return 0
+
+
 def run_incoming(incoming_dir: Path = INCOMING_DIR, ts: datetime = INGEST_TS) -> int:
     files = sorted(p for p in incoming_dir.glob("*.xlsx") if p.is_file())
     if not files:
         print("[ingest] no files in incoming/ — nothing to do.")
         return 0
+    vahan_files = [f for f in files if _is_vahan(f)]
+    other_files = [f for f in files if f not in vahan_files]
     worst = 0
-    for path in files:
+    for path in other_files:
         worst = max(worst, process_file(path, ts))
+    if vahan_files:
+        worst = max(worst, _process_vahan_batch(vahan_files, ts))
     return worst
 
 

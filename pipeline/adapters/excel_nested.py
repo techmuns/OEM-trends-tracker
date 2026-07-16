@@ -139,8 +139,17 @@ class NestedBlockAdapter(SourceAdapter):
                 cur_flow, cur_seg, cur_term = seg_map[label]
                 continue
             if label in totals:
-                rows += self._emit(ws, r, totals[label], None, INDUSTRY_TOTAL_CANONICAL,
-                                    label, month_cols, quarter_cols, record_industry=True)
+                rows += self._emit(
+                    ws,
+                    r,
+                    totals[label],
+                    None,
+                    INDUSTRY_TOTAL_CANONICAL,
+                    label,
+                    month_cols,
+                    quarter_cols,
+                    record_industry=True,
+                )
                 cur_flow = cur_seg = cur_term = None
                 continue
             if cur_term is not None and label == cur_term:
@@ -153,8 +162,17 @@ class NestedBlockAdapter(SourceAdapter):
                     # (company, flow, powertrain) — segment is not in that key — so they still
                     # sum per flow into the industry total. Segment reconciliation excludes the
                     # industry row; quarters aren't recorded for it (would double-count).
-                    rows += self._emit(ws, r, cur_flow, cur_seg, INDUSTRY_TOTAL_CANONICAL, label,
-                                       month_cols, quarter_cols, record_quarters=False)
+                    rows += self._emit(
+                        ws,
+                        r,
+                        cur_flow,
+                        cur_seg,
+                        INDUSTRY_TOTAL_CANONICAL,
+                        label,
+                        month_cols,
+                        quarter_cols,
+                        record_quarters=False,
+                    )
                 cur_seg = cur_term = None
                 continue
             if label in terminators:
@@ -172,8 +190,19 @@ class NestedBlockAdapter(SourceAdapter):
             rows += self._emit(ws, r, cur_flow, cur_seg, canonical, label, month_cols, quarter_cols)
         return rows
 
-    def _emit(self, ws, row, flow, segment, canonical, raw, month_cols, quarter_cols,
-              record_industry=False, record_quarters=True) -> list[ContractRow]:
+    def _emit(
+        self,
+        ws,
+        row,
+        flow,
+        segment,
+        canonical,
+        raw,
+        month_cols,
+        quarter_cols,
+        record_industry=False,
+        record_quarters=True,
+    ) -> list[ContractRow]:
         out: list[ContractRow] = []
         for col, d in month_cols.items():
             v = ws.cell(row=row, column=col).value
@@ -202,12 +231,31 @@ class NestedBlockAdapter(SourceAdapter):
 
     def _row(self, d, flow, segment, canonical, raw, value) -> ContractRow:
         return ContractRow(
-            period_date=d, period_type="month", fiscal_year=fiscal_year_of(d),
-            fiscal_quarter=fiscal_quarter_of(d), category=self.category, segment=segment,
-            sub_segment=None, company_canonical=canonical, company_raw=raw, flow=flow,
-            powertrain="all", geography="IN", metric="units", value=value, unit="units",
-            source=self.source_id, source_file=Path(self.source_file).name,
-            source_period=self.source_period, native_frequency="month", calc_status="reported",
-            revision=0, ingest_date=self.ingest_date, confidence="high", is_superseded=False,
-            is_partial=False, periods_present=None, periods_expected=None,
+            period_date=d,
+            period_type="month",
+            fiscal_year=fiscal_year_of(d),
+            fiscal_quarter=fiscal_quarter_of(d),
+            category=self.category,
+            segment=segment,
+            sub_segment=None,
+            company_canonical=canonical,
+            company_raw=raw,
+            flow=flow,
+            powertrain="all",
+            geography="IN",
+            metric="units",
+            value=value,
+            unit="units",
+            source=self.source_id,
+            source_file=Path(self.source_file).name,
+            source_period=self.source_period,
+            native_frequency="month",
+            calc_status="reported",
+            revision=0,
+            ingest_date=self.ingest_date,
+            confidence="high",
+            is_superseded=False,
+            is_partial=False,
+            periods_present=None,
+            periods_expected=None,
         )

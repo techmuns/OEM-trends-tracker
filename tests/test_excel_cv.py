@@ -15,7 +15,12 @@ from pipeline.contract.constants import INDUSTRY_TOTAL_CANONICAL
 from pipeline.dictionaries.loader import load_company_resolver
 from pipeline.validate.gates import GateContext, TotalsReconciliationGate
 
-META = {"generated_at": "2026-07-15T10:00:00+05:30", "source": "SIAM", "snapshot_id": None, "notes": None}
+META = {
+    "generated_at": "2026-07-15T10:00:00+05:30",
+    "source": "SIAM",
+    "snapshot_id": None,
+    "notes": None,
+}
 
 
 def test_cv_is_quarterly_reported_base(real_parse_cv) -> None:
@@ -86,7 +91,9 @@ def test_cv_view_is_quarter_native_with_year_derived(real_parse_cv) -> None:
     ind_year = next(
         x
         for x in v["series"]
-        if x["company"] == INDUSTRY_TOTAL_CANONICAL and x["flow"] == "domestic" and x["period_type"] == "year"
+        if x["company"] == INDUSTRY_TOTAL_CANONICAL
+        and x["flow"] == "domestic"
+        and x["period_type"] == "year"
     )
     partial = [p for p in ind_year["points"].values() if p["partial"]]
     assert partial and all(p["expected"] == 4 for p in partial)

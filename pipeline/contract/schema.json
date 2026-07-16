@@ -109,8 +109,8 @@
         },
         "category": {
           "type": "string",
-          "enum": ["2W", "PV", "3W", "TRACTOR", "CV"],
-          "description": "Vehicle category. A dimension, never an assumption. v1 seeds 2W but the contract holds all."
+          "enum": ["2W", "PV", "3W", "TRACTOR", "CV", "ALL"],
+          "description": "Vehicle category. A dimension, never an assumption. v1 seeds 2W but the contract holds all. 'ALL' = every vehicle category combined in one reported universe (used by VAHAN all-India registrations, which the source reports across all categories at once); a backward-compatible enum extension, so contract_version stays 1.1.0."
         },
         "segment": {
           "type": ["string", "null"],

@@ -78,9 +78,9 @@ export interface ContractRow {
    */
   fiscal_quarter: string | null;
   /**
-   * Vehicle category. A dimension, never an assumption. v1 seeds 2W but the contract holds all.
+   * Vehicle category. A dimension, never an assumption. v1 seeds 2W but the contract holds all. 'ALL' = every vehicle category combined in one reported universe (used by VAHAN all-India registrations, which the source reports across all categories at once); a backward-compatible enum extension, so contract_version stays 1.1.0.
    */
-  category: "2W" | "PV" | "3W" | "TRACTOR" | "CV";
+  category: "2W" | "PV" | "3W" | "TRACTOR" | "CV" | "ALL";
   /**
    * e.g. 'Scooter', 'Motor cycles', 'Mopeds' (2W); 'PC', 'UV', 'Van' (PV); 'MHCV', 'LCV' (CV).
    */
