@@ -24,6 +24,10 @@ class UnknownSegmentError(KeyError):
     """A raw segment string had no alias mapping in segments.yaml for its category."""
 
 
+class UnknownVahanCategoryError(KeyError):
+    """A raw VAHAN 'Vehicle Category' label had no mapping in vahan_categories.yaml."""
+
+
 def _norm(s: str) -> str:
     # exact match, but tolerant of leading/trailing whitespace only (NOT internal spaces —
     # 'Motor cycles' and the 'India Kawasaki MotorsPrivate Ltd' typo are matched literally).
@@ -98,6 +102,29 @@ def load_categories(path: Path | None = None) -> dict:
     """Per-category block config (segment taxonomy + terminators) from categories.yaml."""
     p = path or (DICT_DIR / "categories.yaml")
     return yaml.safe_load(p.read_text(encoding="utf-8"))["categories"]
+
+
+class VahanCategoryResolver:
+    def __init__(self, label_to_category: dict[str, str]) -> None:
+        self._map = label_to_category
+
+    def resolve(self, raw: str) -> str:
+        key = _norm(raw)
+        try:
+            return self._map[key]
+        except KeyError as e:
+            raise UnknownVahanCategoryError(
+                f"unresolved VAHAN Vehicle Category label {raw!r} — add it to "
+                f"vahan_categories.yaml (never auto-create a mapping)."
+            ) from e
+
+
+@lru_cache(maxsize=1)
+def load_vahan_category_resolver(path: Path | None = None) -> VahanCategoryResolver:
+    p = path or (DICT_DIR / "vahan_categories.yaml")
+    data = yaml.safe_load(p.read_text(encoding="utf-8"))
+    mapping = {_norm(k): v for k, v in (data.get("categories") or {}).items()}
+    return VahanCategoryResolver(mapping)
 
 
 @lru_cache(maxsize=1)

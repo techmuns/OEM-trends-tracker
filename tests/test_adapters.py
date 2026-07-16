@@ -10,9 +10,10 @@ from pipeline.adapters.siam_monthly import SiamMonthlyAdapter
 from pipeline.adapters.siam_scrape import SiamScrapeAdapter
 from pipeline.adapters.vahan import VahanAdapter
 
-# Stubs still raising NotImplementedError. excel_spark (Phase 1) and siam_monthly (Phase 2)
-# are implemented; the SIAM scraper and VAHAN stay stubs.
-STUB_ADAPTERS = [SiamScrapeAdapter, VahanAdapter]
+# Stubs still raising NotImplementedError. excel_spark (Phase 1), siam_monthly (Phase 2) and
+# vahan (live scrape) are implemented; the SIAM scraper stays a stub (paid, login-gated,
+# no public endpoint — see siam_scrape.py's module docstring).
+STUB_ADAPTERS = [SiamScrapeAdapter]
 ALL_ADAPTERS = [ExcelSparkAdapter, SiamMonthlyAdapter, SiamScrapeAdapter, VahanAdapter]
 
 
