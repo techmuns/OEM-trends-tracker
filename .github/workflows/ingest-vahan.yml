@@ -1,0 +1,53 @@
+name: VAHAN discovery (experimental)
+
+# Manual-only, read-only probe for the VAHAN adapter (pipeline/adapters/vahan.py). This is
+# NOT the automated ingest yet — it exists to answer one question empirically: can a
+# GitHub-hosted runner reach vahan.parivahan.gov.in at all? (It was unreachable from the
+# dev sandbox this adapter was built in — a plain connection reset, not a login wall — so
+# whether GitHub's network fares differently was unknown and only a real run answers it.)
+#
+# mode=discover (default): loads the live dashboard, prints reachability + every real
+#   dropdown label (states/axes/years). No parsing, no commit. This is also how
+#   pipeline/dictionaries/vahan_categories.yaml gets its real category labels — copy them
+#   from this job's output, never guess them.
+# mode=ingest: runs the real fetch->parse->validate path for Vehicle-Category x Month,
+#   all-India. Expected to hard-fail on unrecognized categories until vahan_categories.yaml
+#   is populated from a discover run — that failure is informative, not a bug. Still does
+#   NOT commit anything; this workflow only prints results.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "discover (reachability + real labels) or ingest (real parse, no commit)"
+        type: choice
+        options: [discover, ingest]
+        default: discover
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: probe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+
+      - name: Install Python deps
+        run: uv sync --extra dev
+
+      - name: Run VAHAN probe (discover)
+        if: inputs.mode == 'discover'
+        run: uv run python -m pipeline.adapters.vahan --list-options
+
+      - name: Run VAHAN probe (ingest, no commit)
+        if: inputs.mode == 'ingest'
+        run: uv run python -m pipeline.adapters.vahan

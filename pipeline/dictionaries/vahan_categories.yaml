@@ -1,0 +1,14 @@
+# VAHAN "Vehicle Category" dropdown label -> this project's Category enum value.
+#
+# Seeded EMPTY on purpose — same rule as companies.yaml ("No guessed names"). VAHAN's exact
+# live dropdown label strings have not been confirmed against the real site (the dashboard
+# was unreachable in login-gated/network-blocked testing before this adapter was written).
+#
+# The discovery run (`python -m pipeline.adapters.vahan --list-options`, wired into
+# .github/workflows/ingest-vahan.yml) prints the REAL label strings from the live site.
+# Add them here from that real output only, never from assumption — an unresolved category
+# hard-fails the ingest (see UnknownVahanCategoryError) rather than silently guessing.
+
+version: 1
+
+categories: {}
