@@ -77,8 +77,15 @@ def _extras(adapter: SourceAdapter) -> dict:
     return extras
 
 
-def _notes(category: str, live) -> str:
+def _notes(category: str, live, source: str = "SIAM") -> str:
     latest = max(r.period_date for r in live).isoformat()
+    if source == "VAHAN":
+        return (
+            f"Data through {latest}. Source: VAHAN registrations (manually downloaded export "
+            "from the vahan4dashboard), all-India. Registrations are a DIFFERENT measurement "
+            "basis from SIAM wholesale dispatches and are never mixed with them. VAHAN reports "
+            "no exports and no production."
+        )
     if any("Monthly_SIAM" in r.source_file for r in live):
         return (
             f"Data through {latest}. Source: SIAM wholesale dispatches. File 1 (summary) "
@@ -102,6 +109,9 @@ def _notes(category: str, live) -> str:
 
 
 def process_category(category: str, adapter: SourceAdapter, ts: datetime) -> int:
+    # Source is the adapter's, not a global — SIAM and VAHAN can both flow through here. Every
+    # SIAM adapter reports source_id="SIAM", so this is identical for existing categories.
+    source = getattr(adapter, "source_id", None) or SOURCE
     rows = adapter.parse(adapter.fetch("as_of"))
     adapter.validate(rows)
     previous = load_normalized(category)
@@ -125,14 +135,14 @@ def process_category(category: str, adapter: SourceAdapter, ts: datetime) -> int
     save_normalized(category, store_rows)
     write_snapshot(store_rows, ts, category=category)
     build_bundle(
-        store_rows, generated_at=ts, source=SOURCE, category=category,
-        snapshot_id=snapshot_id(ts), notes=_notes(category, live),
+        store_rows, generated_at=ts, source=source, category=category,
+        snapshot_id=snapshot_id(ts), notes=_notes(category, live, source),
         bundle_path=BUNDLE_DIR / f"bundle-{category.lower()}.json",
     )
     write_view(
         store_rows,
-        {"generated_at": ts.isoformat(), "source": SOURCE, "snapshot_id": snapshot_id(ts),
-         "notes": _notes(category, live)},
+        {"generated_at": ts.isoformat(), "source": source, "snapshot_id": snapshot_id(ts),
+         "notes": _notes(category, live, source)},
         category,
     )
     print(f"[ingest] {category}: accepted. added={len(outcome.added_keys)} "

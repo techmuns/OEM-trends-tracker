@@ -72,10 +72,17 @@ def quarter_label(fq: str) -> str:
 
 
 def build_view(rows: Sequence[ContractRow], meta_src: dict, category: str = "2W") -> dict:
-    rows = [r for r in rows if r.category.value == category]
+    # `category` is the VIEW/tab key (also the store + manifest key). It usually equals the
+    # ContractRow.category dimension (2W/PV/3W/CV). A source that reuses a vehicle category
+    # under a separate tab — e.g. VAHAN registrations for 2W — sets `row_category` in
+    # categories.yaml so the view key ("VAHAN2W") stays distinct from the SIAM "2W" tab while
+    # still filtering the right rows. Absent (every SIAM category), it defaults to `category`,
+    # so SIAM output is byte-for-byte unchanged.
+    cat_cfg = load_categories().get(category, {})
+    row_cat = cat_cfg.get("row_category", category)
+    rows = [r for r in rows if r.category.value == row_cat]
     if not rows:
         raise ValueError(f"no rows for category {category}")
-    cat_cfg = load_categories().get(category, {})
     # Base frequency: 2W/PV/3W report monthly (quarter/year derived); CV reports quarterly
     # (quarter is the reported base, year derived from 4 quarters, no month level).
     base_pt = cat_cfg.get("native_frequency", MONTH)
