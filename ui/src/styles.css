@@ -499,7 +499,6 @@ select:disabled {
 .card:hover {
   border-color: var(--border-strong);
 }
-.kpi:hover,
 .insight-card:hover {
   background: linear-gradient(var(--blue-tint), var(--blue-tint)), var(--surface-1);
 }
@@ -541,12 +540,6 @@ select:disabled {
 }
 
 /* --- layout grids --- */
-.kpis {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  margin-bottom: 16px;
-}
 .mainrow {
   display: grid;
   grid-template-columns: 128px minmax(0, 1.72fr) minmax(0, 1fr);
@@ -573,40 +566,6 @@ select:disabled {
   margin-bottom: 16px;
 }
 
-/* --- KPI card (design.md §8.1) --- */
-.kpi {
-  min-height: 104px;
-  padding: 16px 18px;
-  gap: 0;
-}
-.kpi .label {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.kpi .value {
-  font-size: 24px;
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-top: 10px;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-}
-.kpi .value.name {
-  font-size: 18px;
-}
-.kpi .cmp {
-  font-size: 12px;
-  margin-top: 7px;
-}
-.kpi .scope {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 4px;
-}
 .info {
   color: var(--text-muted);
   cursor: help;
@@ -1084,11 +1043,6 @@ tr.total td.oem {
     grid-template-columns: 1fr;
   }
 }
-@media (max-width: 900px) {
-  .kpis {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
 @media (max-width: 767px) {
   /* let the header grow to fit wrapped controls instead of overflowing 48px */
   .zone1 {
@@ -1104,14 +1058,8 @@ tr.total td.oem {
   .tabs {
     grid-template-columns: 1fr;
   }
-  .kpis {
-    grid-template-columns: repeat(2, 1fr);
-  }
   .strip {
     grid-template-columns: 1fr;
-  }
-  .kpi .value {
-    font-size: 21px;
   }
 }
 
@@ -2008,7 +1956,6 @@ button.title.as-home:focus-visible {
 }
 tbody tr:hover .cmp-grip.row-grip,
 thead th:hover .cmp-grip.col-grip,
-.kpi:hover .cmp-grip.kpi-grip,
 .cmp-grip:focus-visible {
   opacity: 1;
 }
@@ -2017,14 +1964,6 @@ thead th:hover .cmp-grip.col-grip,
 }
 .col-grip {
   margin-left: 4px;
-}
-.kpi {
-  position: relative;
-}
-.kpi-grip {
-  position: absolute;
-  top: 12px;
-  right: 12px;
 }
 .metric-grip {
   opacity: 0.5;
@@ -2068,20 +2007,9 @@ thead th:hover .cmp-grip.col-grip,
   .insights {
     grid-template-columns: 1fr;
   }
-  .kpis {
-    grid-template-columns: repeat(3, 1fr);
-  }
 }
 @container (max-width: 760px) {
-  .kpis {
-    grid-template-columns: repeat(2, 1fr);
-  }
   .tabs {
-    grid-template-columns: 1fr;
-  }
-}
-@container (max-width: 520px) {
-  .kpis {
     grid-template-columns: 1fr;
   }
 }

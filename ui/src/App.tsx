@@ -6,7 +6,7 @@ import { buildTable, getSeries, priorKey, type TableRow } from "./lib/view";
 import { fmtPct, fmtPp, fmtShare, fmtUnits, fmtUnitsCompact, monthYear, shortName } from "./lib/format";
 import { ComparisonTable, type DisplayMode, type TableCompare } from "./components/ComparisonTable";
 import { ShareTrendChart, type LegendCompare, type TrendLine, type TrendPoint, type ValueKind } from "./components/ShareTrendChart";
-import { buildSeries, type CompareSeries, type MetricKey } from "./lib/compare";
+import { buildSeries, type MetricKey } from "./lib/compare";
 import { CompareProvider, useCompare } from "./lib/useCompare";
 import { DragHandle } from "./lib/dragfx";
 import { CompareDockTab } from "./components/compare/CompareDockTab";
@@ -482,47 +482,6 @@ function labelFor(axis: Period[], key: string): string {
   return axis.find((p) => p.key === key)?.label ?? key;
 }
 
-// --- KPI card ---
-function Kpi({
-  label,
-  value,
-  valueClass,
-  cmp,
-  scope,
-  caveat,
-  compare,
-}: {
-  label: string;
-  value: string;
-  valueClass?: string;
-  cmp?: React.ReactNode;
-  scope?: string;
-  caveat?: string;
-  compare?: { make: () => CompareSeries | null; add: (s: CompareSeries) => void };
-}) {
-  return (
-    <div className={`card kpi ${compare ? "kpi-draggable" : ""}`}>
-      <div className="label">
-        {label}
-        {caveat && (
-          <span className="info" title={caveat}>
-            i
-          </span>
-        )}
-      </div>
-      {compare && <DragHandle build={compare.make} onAdd={compare.add} label={label} className="kpi-grip" />}
-      <div className={`value ${valueClass ?? ""}`}>{value}</div>
-      {cmp && <div className="cmp">{cmp}</div>}
-      {scope && <div className="scope">{scope}</div>}
-    </div>
-  );
-}
-
-function yoyNode(p?: Point) {
-  if (!p || p.yoy === null) return <span className="dash">—</span>;
-  return <Delta text={`${fmtPct(p.yoy)} YoY`} dir={deltaDir(p.yoy)} />;
-}
-
 // Build enriched trend lines for a (flow, powertrain) series set. Each point carries the
 // plotted metric (share or absolute volume) plus absolute volume, share, YoY and pp-changes,
 // so the tooltip is identical on every page. `baseNames` fixes rank colours; extra names
@@ -831,8 +790,6 @@ function SalesTab({
   const key = period.key;
   const priorL = labelFor(axis, priorKey(pt, key));
   const industry = pick(view, TOTAL, "domestic", "all", pt, key);
-  const sel = oem ? pick(view, oem, "domestic", "all", pt, key) : undefined;
-  const selPrior = oem ? pick(view, oem, "domestic", "all", pt, priorKey(pt, key)) : undefined;
   const partial = industry?.partial;
 
   const { rows, total } = useMemo(
@@ -852,13 +809,6 @@ function SalesTab({
   const gainer = [...eligible].sort((a, b) => (b.chg ?? -9) - (a.chg ?? -9))[0];
   const loser = [...eligible].sort((a, b) => (a.chg ?? 9) - (b.chg ?? 9))[0];
   const fastest = [...eligible].filter((r) => r.yoy !== null).sort((a, b) => (b.yoy ?? -9) - (a.yoy ?? -9))[0];
-
-  const leader = rows[0];
-  const top3Share = rows.slice(0, 3).reduce((s, r) => s + (r.share ?? 0), 0);
-  const evLatest = view.meta.ev_latest_period;
-  const evAxis = axis.filter((p) => !evLatest || p.date <= evLatest);
-  const evP = evAxis[evAxis.length - 1];
-  const evPen = evP ? view.ev_penetration["domestic"]?.[pt]?.[evP.key] ?? null : null;
 
   const colCompany = oem || rows[0]?.company;
   const table: TableConfig = {
@@ -894,86 +844,6 @@ function SalesTab({
 
   return (
     <>
-      <div className="kpis">
-        <Kpi
-          label={isRegs(view) ? "Total Registrations" : "Total Industry Sales"}
-          value={fmtUnitsCompact(industry?.v)}
-          cmp={yoyNode(industry)}
-          scope={period.label}
-          caveat={`Total ${basisOf(view)} within the reported ${view.meta.source} universe (not the whole market).`}
-          compare={{ make: () => mk(TOTAL, "sales"), add: compare.add }}
-        />
-        {oem ? (
-          <>
-            <Kpi
-              label={`${shortName(oem)} Sales`}
-              value={fmtUnitsCompact(sel?.v)}
-              cmp={yoyNode(sel)}
-              scope={period.label}
-              compare={{ make: () => mk(oem, "sales"), add: compare.add }}
-            />
-            <Kpi
-              label="YoY Growth"
-              value={sel?.yoy == null ? "—" : fmtPct(sel.yoy)}
-              scope={`vs ${priorL}`}
-            />
-            <Kpi
-              label="Share within Reported Universe"
-              value={fmtShare(sel?.share)}
-              cmp={selPrior?.share != null ? <span className="flat">vs {fmtShare(selPrior.share)} ({priorL})</span> : undefined}
-              scope={shortName(oem)}
-              caveat={
-                view.meta.share_caveat +
-                (view.meta.has_ev ? " Some pure-EV makers (e.g. Ola) are not SIAM members, so EV share is understated." : "")
-              }
-              compare={{ make: () => mk(oem, "market_share"), add: compare.add }}
-            />
-            <Kpi
-              label="Share Change (pp)"
-              value={sel?.chg == null ? "—" : fmtPp(sel.chg)}
-              cmp={sel?.chg != null ? <Delta text={`${fmtPp(sel.chg)} YoY`} dir={deltaDir(sel.chg)} /> : undefined}
-              scope={`vs ${priorL}`}
-            />
-          </>
-        ) : (
-          <>
-            <Kpi
-              label="Market Leader"
-              value={fmtShare(leader?.share)}
-              valueClass=""
-              cmp={leader?.chg != null ? <Delta text={fmtPp(leader.chg)} dir={deltaDir(leader.chg)} /> : undefined}
-              scope={leader ? shortName(leader.company) : undefined}
-              caveat="Largest OEM by current-period sales, and its share of the reported universe."
-              compare={leader ? { make: () => mk(leader.company, "market_share"), add: compare.add } : undefined}
-            />
-            <Kpi label="Industry YoY" value={industry?.yoy == null ? "—" : fmtPct(industry.yoy)} scope={`vs ${priorL}`} />
-            <Kpi
-              label="Top-3 Concentration"
-              value={fmtShare(top3Share || null)}
-              scope="share of top 3 OEMs"
-              caveat="Combined share of the three largest OEMs within the reported universe."
-            />
-            {view.meta.has_ev ? (
-              <Kpi
-                label="EV Penetration"
-                value={fmtShare(evPen)}
-                scope={evP ? `EV of ${view.meta.category} · ${evP.label}` : "—"}
-                caveat={view.meta.share_caveat + " Pure-EV makers outside SIAM are excluded, so this understates EV."}
-                compare={{ make: () => mk("Industry", "ev_penetration"), add: compare.add }}
-              />
-            ) : (
-              <Kpi
-                label="Total Exports"
-                value={fmtUnitsCompact(pick(view, TOTAL, "export", "all", pt, key)?.v)}
-                scope={period.label}
-                caveat={`Wholesale ${view.meta.category} exports within the reported SIAM universe. EV is not broken out for this category — EV-only makers are counted inline.`}
-                compare={{ make: () => mk(TOTAL, "exports"), add: compare.add }}
-              />
-            )}
-          </>
-        )}
-      </div>
-
       <AnalyticalTab
         axis={axis}
         pt={pt}
@@ -1097,12 +967,6 @@ function EvTab({
 
   const key = evPeriod.key;
   const priorEvL = labelFor(axis, priorKey(pt, key));
-  const evInd = pick(view, TOTAL, "domestic", "ev", pt, key);
-  const allInd = pick(view, TOTAL, "domestic", "all", pt, key);
-  const pen = view.ev_penetration["domestic"]?.[pt]?.[key] ?? null;
-  const penPrior = view.ev_penetration["domestic"]?.[pt]?.[priorKey(pt, key)] ?? null;
-  const ice = allInd && evInd ? { v: (allInd.v ?? 0) - (evInd.v ?? 0) } : { v: null };
-
   const { rows, total } = buildTable(view, { flow: "domestic", powertrain: "ev", periodType: pt, periodKey: key, totalLabel: TOTAL });
 
   // Chart: default = EV vs ICE penetration; focus (row hover or lock) = that OEM's EV-universe share.
@@ -1173,31 +1037,6 @@ function EvTab({
           latest EV period ({evPeriod.label}).
         </Unavailable>
       )}
-      <div className="kpis" style={{ marginTop: frozen ? 12 : 0 }}>
-        <Kpi
-          label="EV Volume"
-          value={fmtUnitsCompact(evInd?.v)}
-          cmp={yoyNode(evInd)}
-          scope={evPeriod.label}
-          compare={{ make: () => mk(TOTAL, "ev_volume"), add: compare.add }}
-        />
-        <Kpi label="EV YoY" value={evInd?.yoy == null ? "—" : fmtPct(evInd.yoy)} scope={`vs ${priorEvL}`} />
-        <Kpi
-          label="EV Penetration"
-          value={fmtShare(pen)}
-          cmp={pen != null && penPrior != null ? <Delta text={`${fmtPp(pen - penPrior)} YoY`} dir={deltaDir(pen - penPrior)} /> : undefined}
-          scope={`within reported ${view.meta.source} universe`}
-          caveat={
-            isRegs(view)
-              ? "EV penetration within the reported VAHAN registrations universe. Battery-electric only (PURE EV + ELECTRIC BOV); hybrids and hydrogen are not counted as EV."
-              : "EV penetration within reported SIAM universe. Pure-EV makers outside SIAM are excluded, so this understates EV."
-          }
-          compare={{ make: () => mk("Industry", "ev_penetration"), add: compare.add }}
-        />
-        <Kpi label="ICE Volume" value={fmtUnitsCompact(ice.v)} scope={evPeriod.label} />
-        <Kpi label="ICE Share" value={pen == null ? "—" : fmtShare(1 - pen)} scope="of reported universe" />
-      </div>
-
       <AnalyticalTab
         axis={axis}
         pt={pt}
@@ -1257,8 +1096,6 @@ function ProdTab({
       </Unavailable>
     );
   }
-  const priorL = labelFor(axis, priorKey(pt, key));
-  const expInd = pick(view, TOTAL, "export", "all", pt, key);
   const exp = buildTable(view, { flow: "export", powertrain: "all", periodType: pt, periodKey: key, totalLabel: TOTAL });
 
   // Production is featured only where it is a proper source-reported series — Commercial
@@ -1370,45 +1207,6 @@ function ProdTab({
 
   return (
     <>
-      <div className="kpis">
-        <Kpi
-          label="Total Exports"
-          value={fmtUnitsCompact(expInd?.v)}
-          cmp={yoyNode(expInd)}
-          scope={period.label}
-          compare={{ make: () => mk(TOTAL, "exports"), add: compare.add }}
-        />
-        <Kpi
-          label={oem ? `${shortName(oem)} Exports` : "Export Leader"}
-          value={oem ? fmtUnitsCompact(pick(view, oem, "export", "all", pt, key)?.v) : fmtShare(exp.rows[0]?.share)}
-          scope={oem ? period.label : exp.rows[0] ? shortName(exp.rows[0].company) : "—"}
-          compare={
-            oem
-              ? { make: () => mk(oem, "exports"), add: compare.add }
-              : exp.rows[0]
-                ? { make: () => mk(exp.rows[0].company, "exports"), add: compare.add }
-                : undefined
-          }
-        />
-        <Kpi label="Export YoY" value={expInd?.yoy == null ? "—" : fmtPct(expInd.yoy)} scope={`vs ${priorL}`} />
-        <Kpi
-          label="Production"
-          value={prodSupported && prodPeriod ? fmtUnitsCompact(pick(view, TOTAL, "production", "all", pt, prodPeriod.key)?.v) : "—"}
-          scope={prodSupported && prodPeriod ? prodPeriod.label : "CV only"}
-          caveat={
-            prodSupported
-              ? "Source-reported quarterly production (Commercial Vehicles)."
-              : `Production is reported only for Commercial Vehicles (source-reported quarterly). Not available for ${view.meta.category_label.toLowerCase()}.`
-          }
-          compare={prodSupported ? { make: () => mk(TOTAL, "production"), add: compare.add } : undefined}
-        />
-        <Kpi
-          label="Export Share Leader"
-          value={fmtShare(exp.rows[0]?.share)}
-          scope={exp.rows[0] ? shortName(exp.rows[0].company) : "—"}
-        />
-      </div>
-
       <div className="periodnav" style={{ justifyContent: "flex-end" }}>
         <span style={{ fontSize: 11, color: "var(--text-muted)", alignSelf: "center", marginRight: 2 }}>Metric</span>
         <div className="seg mini" role="group" aria-label="Metric">
