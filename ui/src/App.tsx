@@ -54,6 +54,23 @@ const isRegs = (view: ViewModel): boolean => view.meta.source === "VAHAN";
 const flowNoun = (view: ViewModel): string => (isRegs(view) ? "Registrations" : "Sales");
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
+// The category switcher groups its options by source so it always reads "which dataset is
+// this?" — a SIAM (dispatches) view and a VAHAN (registrations) view are never a flat,
+// look-alike list. `basisFor`/`sourceHeader` name the group; `optionLabel` keeps each entry
+// short because the group header already carries the source + basis.
+const basisFor = (source: string): string => BASIS_LABEL[source] ?? "reported volumes";
+const SOURCE_ORDER = ["SIAM", "VAHAN", "BROKER", "MANUAL"];
+const sourceHeader = (source: string): string => `${source} · ${cap(basisFor(source))}`;
+const VAHAN_SHORT: Record<string, string> = {
+  VAHAN: "All vehicles",
+  VAHAN2W: "Two-Wheelers (2W)",
+  VAHANPV: "Passenger (PV)",
+  VAHAN3W: "Three-Wheelers (3W)",
+  VAHANCV: "Commercial (CV)",
+};
+const optionLabel = (c: CategoryInfo): string =>
+  c.source === "VAHAN" ? (VAHAN_SHORT[c.key] ?? c.label.replace(/\s*·\s*VAHAN$/i, "")) : c.label;
+
 export function App() {
   // Compare state lives ABOVE the category loader so the workspace survives category and page
   // switches within a session.
@@ -112,19 +129,37 @@ function CategorySelect({
   value: string;
   onChange: (v: string) => void;
 }) {
+  // Group by source (SIAM, VAHAN, …), preserving a sensible source order. With a single
+  // source there's nothing to disambiguate, so render a plain list.
+  const bySource = new Map<string, CategoryInfo[]>();
+  for (const c of categories) bySource.set(c.source, [...(bySource.get(c.source) ?? []), c]);
+  const sources = [...bySource.keys()].sort(
+    (a, b) => ((SOURCE_ORDER.indexOf(a) + 1 || 99) - (SOURCE_ORDER.indexOf(b) + 1 || 99)),
+  );
+  const grouped = sources.length > 1;
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      title="Vehicle category"
-      aria-label="Vehicle category"
+      title="Dataset — pick a SIAM (dispatches) or VAHAN (registrations) view"
+      aria-label="Dataset (source and vehicle category)"
       disabled={categories.length <= 1}
     >
-      {categories.map((c) => (
-        <option key={c.key} value={c.key}>
-          {c.label}
-        </option>
-      ))}
+      {grouped
+        ? sources.map((s) => (
+            <optgroup key={s} label={sourceHeader(s)}>
+              {bySource.get(s)!.map((c) => (
+                <option key={c.key} value={c.key}>
+                  {optionLabel(c)}
+                </option>
+              ))}
+            </optgroup>
+          ))
+        : categories.map((c) => (
+            <option key={c.key} value={c.key}>
+              {c.label}
+            </option>
+          ))}
     </select>
   );
 }
@@ -217,6 +252,14 @@ function Dashboard({
               {host.oem ? ` · ${shortName(host.oem)}` : ""}
             </span>
           )}
+          <span
+            className="source-pill"
+            data-source={view.meta.source}
+            title={`You're viewing ${view.meta.source} ${basisOf(view)} — switch datasets in the dropdown to the right`}
+          >
+            <b>{view.meta.source}</b>
+            <span className="src-basis">{cap(basisOf(view))}</span>
+          </span>
           <CategorySelect categories={categories} value={cat} onChange={setCat} />
           <OemSelect view={view} value={oem} onChange={setOem} />
           <div className="seg" role="group" aria-label="Period granularity">
