@@ -59,8 +59,8 @@ ingestion. Ingestion parses → validates through the gates → on success write
 file is **quarantined** to `data/raw/quarantine/` and every last-good view stays live and
 unchanged — a bad drop never poisons the store or takes the dashboard down.
 
-If the helper isn't set up yet (see next section), the panel says so and offers a **"Open the
-GitHub upload page"** link as a fallback — that flow needs no setup and works immediately.
+If the helper isn't set up yet (see next section), the panel says so and asks you to have the
+one-time setup finished — the button-based upload starts working as soon as the token is in place.
 
 ---
 

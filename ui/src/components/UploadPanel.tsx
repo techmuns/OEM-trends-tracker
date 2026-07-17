@@ -12,8 +12,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CategoryInfo } from "../lib/types";
 
-const GITHUB_UPLOAD_URL = "https://github.com/techmuns/OEM-trends-tracker/upload/main/data/raw/incoming";
-
 type Opt = { value: string; label: string; short: string; keys: string[] };
 const OPTIONS: Opt[] = [
   { value: "SIAM", label: "SIAM workbook — auto-splits 2W / PV / 3W / CV", short: "SIAM workbook", keys: ["2W", "PV", "3W", "CV"] },
@@ -104,13 +102,13 @@ export function UploadPanel({
         });
         setFiles([]);
       } else if (r.status === 501 || r.status === 404) {
-        setStatus({ tone: "err", msg: "In-dashboard upload isn't set up yet — use the GitHub link below, or ask your admin to finish setup." });
+        setStatus({ tone: "err", msg: "In-dashboard upload isn't set up yet — ask your admin to finish the one-time setup." });
       } else {
         const j = await r.json().catch(() => ({}));
         setStatus({ tone: "err", msg: (j.error || `Upload failed (${r.status}).`).slice(0, 200) });
       }
     } catch {
-      setStatus({ tone: "err", msg: "Upload endpoint isn't reachable here (it lives on the deployed dashboard). Use the GitHub link below." });
+      setStatus({ tone: "err", msg: "Upload isn't reachable here — this works on the live dashboard, not in local preview." });
     }
   };
 
@@ -193,13 +191,6 @@ export function UploadPanel({
         </div>
 
         {status.msg && <div className={`upl-status ${status.tone}`}>{status.msg}</div>}
-
-        <div className="upl-alt">
-          Prefer GitHub?{" "}
-          <a href={GITHUB_UPLOAD_URL} target="_blank" rel="noopener noreferrer">
-            Open the GitHub upload page
-          </a>
-        </div>
       </div>
     </div>
   );

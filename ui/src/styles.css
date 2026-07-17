@@ -1518,14 +1518,6 @@ button.title.as-home:focus-visible {
   background: var(--negative-soft);
   border-color: rgba(224, 107, 98, 0.3);
 }
-.upl-alt {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-.upl-alt a {
-  color: var(--accent);
-}
 
 /* --- data coverage overview --- */
 .btn.coverage {
