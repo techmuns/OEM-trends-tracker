@@ -13,6 +13,7 @@ import { CompareDockTab } from "./components/compare/CompareDockTab";
 import { DockedCompareWorkspace } from "./components/compare/DockedCompareWorkspace";
 import { ResizableSplitPane } from "./components/compare/ResizableSplitPane";
 import { UploadPanel } from "./components/UploadPanel";
+import { DataCoveragePanel, coverageStats } from "./components/DataCoveragePanel";
 import {
   Delta,
   deltaDir,
@@ -206,6 +207,8 @@ function Dashboard({
   const snapshot = useSnapshotMode();
   const compare = useCompare();
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [coverageOpen, setCoverageOpen] = useState(false);
+  const cov = coverageStats(categories);
   const [tab, setTab] = useQuery<Tab>("tab", "sales");
   const [rawPt, setPt] = useQuery<PeriodType>("pt", "month");
   const [mode, setMode] = useQuery<DisplayMode>("mode", "both");
@@ -290,6 +293,13 @@ function Dashboard({
             ↻
           </button>
           <button
+            className={`btn coverage${cov.missing > 0 ? " has-missing" : ""}`}
+            onClick={() => setCoverageOpen(true)}
+            title={`Data coverage — ${cov.loaded} of ${cov.total} datasets loaded${cov.missing > 0 ? `, ${cov.missing} not in yet` : ""}`}
+          >
+            ◫ Data {cov.loaded}/{cov.total}
+          </button>
+          <button
             className="btn accent upload"
             onClick={() => setUploadOpen(true)}
             title="Upload a SIAM or VAHAN source file — pick the category, choose the file(s), done"
@@ -372,6 +382,12 @@ function Dashboard({
         />
       </main>
       <UploadPanel open={uploadOpen} onClose={() => setUploadOpen(false)} />
+      <DataCoveragePanel
+        open={coverageOpen}
+        categories={categories}
+        onClose={() => setCoverageOpen(false)}
+        onUpload={() => setUploadOpen(true)}
+      />
     </div>
   );
 }

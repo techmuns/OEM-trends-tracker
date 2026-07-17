@@ -1516,6 +1516,92 @@ button.title.as-home:focus-visible {
   color: var(--accent);
 }
 
+/* --- data coverage overview --- */
+.btn.coverage {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+/* amber hint when one or more datasets aren't loaded yet */
+.btn.coverage.has-missing {
+  border-color: var(--amber-border);
+  color: var(--amber);
+}
+.btn.coverage.has-missing:hover {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+.cov {
+  width: min(500px, 100%);
+  max-height: min(80vh, 640px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px 18px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+.cov-grp {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.cov-grp-h {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 6px 0 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 3px;
+}
+.cov-row {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 5px 4px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+}
+.cov-row.out {
+  opacity: 0.92;
+}
+.cov-dot {
+  flex: 0 0 auto;
+  width: 15px;
+  text-align: center;
+  font-size: 12px;
+}
+.cov-row.in .cov-dot {
+  color: var(--positive);
+}
+.cov-row.out .cov-dot {
+  color: var(--text-disabled);
+}
+.cov-name {
+  flex: 0 0 auto;
+  min-width: 150px;
+  color: var(--text-secondary);
+}
+.cov-row.out .cov-name {
+  color: var(--text-muted);
+}
+.cov-meta {
+  flex: 1 1 auto;
+  text-align: right;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.cov-meta.miss {
+  color: var(--amber);
+  text-align: left;
+  font-variant-numeric: normal;
+}
+
 /* --- empty drop zone --- */
 .cmp-empty {
   flex: 1;
