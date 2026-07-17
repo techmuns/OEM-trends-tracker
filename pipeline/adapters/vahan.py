@@ -48,6 +48,12 @@ from pipeline.dictionaries.loader import UnknownCompanyError, load_company_resol
 SHEET = "reportTable"
 _IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
 OTHERS_CANONICAL = "Others"
+# A class-filtered VAHAN export carries a tiny tail of cross-segment misclassifications
+# (e.g. a car maker with a handful of "two-wheeler" registrations). Mapped makers below this
+# share of the reported universe fold into the Others residual instead of showing as named
+# rows — surfacing "Tata Motors: 1,407" in a 2W tab reads as an error. Their volume still
+# counts in Others and the universe total, so the denominator is unchanged.
+MAKER_MIN_SHARE = 0.0005  # 0.05%
 
 _MONTHS = {
     "JAN": 1,
@@ -256,6 +262,14 @@ class VahanFileAdapter(SourceAdapter):
                     others[month] += v
                 else:
                     mapped[canonical][month] += v
+
+        # Fold negligible mapped makers into Others (see MAKER_MIN_SHARE). Cross-segment
+        # noise in a class-filtered export shouldn't appear as a named maker row.
+        grand = sum(total.values()) or 1.0
+        for canonical in list(mapped):
+            if sum(mapped[canonical].values()) < MAKER_MIN_SHARE * grand:
+                for month, v in mapped.pop(canonical).items():
+                    others[month] += v
 
         rows: list[ContractRow] = []
         for canonical, per_m in mapped.items():

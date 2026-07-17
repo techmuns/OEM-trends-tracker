@@ -57,6 +57,23 @@ def test_maker_parse_maps_known_buckets_unknown_and_totals() -> None:
     assert sum(v for k, v in jan.items() if k != "Total Reported Universe") == total
 
 
+def test_negligible_mapped_makers_fold_into_others() -> None:
+    # A class-filtered VAHAN export can carry a car/truck maker with a handful of
+    # misclassified rows (e.g. "Tata Motors" in a two-wheeler export). Below
+    # MAKER_MIN_SHARE it folds into Others instead of showing as a named maker; its
+    # volume and the reported-universe total are preserved.
+    a = VahanFileAdapter(MAKER)
+    data = {
+        "HERO MOTOCORP LTD": {1: 1_000_000.0},
+        "TATA MOTORS LTD": {1: 100.0},  # 0.01% of the universe -> Others
+    }
+    jan = _jan(a._emit_makers(data, 2026, "synthetic.xlsx"))
+    assert "Tata Motors" not in jan  # folded, not surfaced as a named maker
+    assert jan["Hero MotoCorp"] == 1_000_000
+    assert jan["Others"] == 100  # the folded volume lands in Others
+    assert jan["Total Reported Universe"] == 1_000_100  # denominator unchanged
+
+
 def test_fuel_parse_counts_only_battery_electric_as_ev() -> None:
     a = VahanFileAdapter(FUEL)
     rows = a.parse(a.fetch("x"))
