@@ -341,7 +341,7 @@ export function CompareChart({
                       d={d}
                       fill="none"
                       style={{ stroke, cursor: "pointer" }}
-                      strokeWidth={isFocus ? 2.6 : 1.6}
+                      strokeWidth={isFocus ? 2.5 : 2}
                       strokeLinejoin="round"
                       strokeLinecap="round"
                     />

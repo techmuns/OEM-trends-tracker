@@ -1,77 +1,111 @@
 /* OEM Tracker — Munshot embedded dashboard.
-   Premium OEM-intelligence cockpit: cool near-black surfaces with navy undertones,
-   restrained copper/bronze accents (~10% of the surface), thin blue-grey borders instead
-   of shadows. Green/red only for data movement; copper only for active/selected/emphasis.
-   Single dark theme, driven entirely by tokens. Flat cards, 4px radius, compact spacing. */
+   Institutional-fintech intelligence terminal: near-black violet-glow canvas, purple UI
+   identity, with green (confirmed positive / complete), yellow (attention / flag / review),
+   pink/red (critical negative) and grey (inactive) used intentionally by MEANING.
+   One centralised token system; every component reads these tokens. */
 :root {
   color-scheme: dark;
 
-  /* surfaces — cool near-black with navy undertones */
-  --canvas: #06090f;
-  --surface-1: #0a1018; /* primary card / table surface */
-  --surface-2: #0d1520; /* secondary surface / table header */
-  --surface-hover: #101a27; /* elevated / hover surface */
-  --row-alt: #0d131c; /* alternating table row B */
+  /* ---- base palette ---- */
+  --bg-main: #08060f;
+  --bg-deep: #05040b;
+  --bg-elevated: #100c1b;
+  --surface-main: #171222;
+  --surface-raised: #1c162b;
+  --surface-hovercolor: #211936;
 
-  /* text */
-  --text-primary: #f4f6f8;
-  --text-secondary: #c2cad5;
-  --text-muted: #8491a3;
-  --text-disabled: #647184; /* hint */
+  --border-default: #332d3d;
+  --border-softc: rgba(255, 255, 255, 0.07);
+  --border-active: #8f70f5;
 
-  /* copper / bronze accents — active + emphasis only */
-  --accent: #c68a52; /* soft copper — active text/icons */
-  --accent-strong: #b87333; /* primary copper — key fills/lines */
-  --bronze: #8c5a2b; /* deep bronze */
-  --accent-soft: rgba(184, 115, 51, 0.14); /* copper tint */
-  --accent-border: rgba(198, 138, 82, 0.5); /* copper border */
+  --purple-primary: #a17cfa;
+  --purple-strong: #7c3aed;
+  --purple-soft: rgba(161, 124, 250, 0.12);
 
-  /* blue tones — subtle undertone, depth, hover */
-  --steel-blue: #1b2a41;
-  --oem-blue: #2d4f7c;
-  --soft-blue: #6e90c9;
-  --blue-tint: rgba(110, 144, 201, 0.1); /* pale blue overlay */
-  --row-hover: rgba(110, 144, 201, 0.08); /* table row hover */
-  --selected-blue: rgba(45, 79, 124, 0.18);
+  --green-primary: #00b88a;
+  --green-bright: #00d09c;
+  --green-soft: rgba(0, 184, 138, 0.12);
 
-  /* borders — thin blue-grey */
-  --border: rgba(120, 155, 210, 0.14);
-  --border-subtle: rgba(120, 155, 210, 0.09);
-  --border-strong: rgba(120, 155, 210, 0.24);
+  --yellow-primary: #f2b200;
+  --yellow-bright: #ffc400;
+  --yellow-soft: rgba(242, 178, 0, 0.12);
 
-  /* semantic — data movement only */
-  --positive: #4fb783;
-  --positive-soft: rgba(79, 183, 131, 0.12);
-  --negative: #e06b62;
-  --negative-soft: rgba(224, 107, 98, 0.12);
-  --neutral-data: #8491a3;
+  --pink-primary: #ff5b88;
+  --red-negative: #ff5c72;
 
-  --ev: #6e90c9; /* EV = soft OEM blue */
-  --ice: #55657e; /* ICE = muted blue-grey */
+  --text-primary: #fffdf5;
+  --text-secondary: #b8b0c6;
+  --text-muted: #81798f;
+  --text-disabled: #55505f;
 
-  /* coverage/partial warnings — muted gold, distinct from copper */
-  --amber: #cda657;
-  --amber-soft: rgba(205, 166, 87, 0.11);
-  --amber-border: rgba(205, 166, 87, 0.32);
+  --neutral-dot: #403b49;
+  --grid-line: rgba(255, 255, 255, 0.055);
+  --divider: rgba(255, 255, 255, 0.08);
 
-  --header-bg: rgba(6, 9, 15, 0.92);
-  --tooltip-bg: #0c1622;
+  /* soft elevation + interaction (per spec) */
+  --card-shadow: 0 18px 48px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  --active-glow: 0 0 0 1px rgba(161, 124, 250, 0.2), 0 0 28px rgba(124, 58, 237, 0.26),
+    inset 0 0 18px rgba(161, 124, 250, 0.045);
+  --hover-shadow: 0 22px 52px rgba(0, 0, 0, 0.4), 0 0 22px rgba(124, 58, 237, 0.13);
+  --btn-primary: linear-gradient(135deg, #7c3aed, #9168f5);
 
-  /* chart lines: copper focus, blue comparison lines */
-  --chart-1: #d0e3ff; /* primary comparison line — pale blue */
-  --chart-2: #7096d1; /* secondary comparison line — muted blue */
-  --chart-3: #97aac8; /* additional — restrained blue-grey */
-  --chart-focus: #c68a52; /* focused / selected line — copper */
-  --chart-grid: rgba(120, 155, 210, 0.1);
-  --chart-axis: #8491a3;
-  --chart-crosshair: rgba(120, 155, 210, 0.28);
+  /* ---- component aliases: existing token names → new palette (so all CSS re-themes) ---- */
+  --canvas: var(--bg-main);
+  --surface-1: rgba(23, 18, 34, 0.9); /* card / table surface (surface-main @ 90%) */
+  --surface-2: var(--bg-elevated); /* secondary surface / table header */
+  --surface-hover: var(--surface-hovercolor);
+  --row-alt: rgba(255, 255, 255, 0.018); /* alternating table row */
 
-  --scrollbar-thumb: rgba(120, 155, 210, 0.22);
+  --accent: var(--purple-primary);
+  --accent-strong: var(--purple-strong);
+  --accent-soft: var(--purple-soft);
+  --accent-border: var(--border-active);
+
+  --blue-tint: var(--purple-soft); /* legacy alias → purple overlay */
+  --row-hover: rgba(161, 124, 250, 0.055);
+  --selected-blue: rgba(28, 22, 43, 0.96);
+
+  --border: var(--border-default);
+  --border-subtle: var(--border-softc);
+  --border-strong: rgba(161, 124, 250, 0.42);
+
+  --positive: var(--green-primary);
+  --positive-soft: var(--green-soft);
+  --negative: var(--red-negative);
+  --negative-soft: rgba(255, 92, 114, 0.12);
+  --neutral-data: var(--text-muted);
+
+  --ev: var(--green-primary); /* EV = growth / clean → green */
+  --ice: var(--text-muted); /* ICE = neutral grey */
+
+  /* coverage / partial / attention → yellow */
+  --amber: var(--yellow-primary);
+  --amber-soft: var(--yellow-soft);
+  --amber-border: rgba(242, 178, 0, 0.4);
+
+  --header-bg: rgba(8, 6, 15, 0.82);
+  --tooltip-bg: var(--surface-main);
+  --tooltip-border: #4a3d61;
+
+  /* chart series — coloured by MEANING: purple (primary/selected), green (positive peer),
+     yellow (attention), red (decline), grey (neutral) */
+  --chart-1: var(--purple-primary);
+  --chart-2: var(--green-primary);
+  --chart-3: var(--yellow-primary);
+  --chart-4: var(--red-negative);
+  --chart-neutral: var(--text-muted);
+  --chart-focus: var(--purple-primary); /* selected / focused line */
+  --chart-grid: var(--grid-line);
+  --chart-axis: var(--text-muted);
+  --chart-crosshair: rgba(161, 124, 250, 0.3);
+
+  --scrollbar-thumb: rgba(161, 124, 250, 0.28);
   --scrollbar-track: transparent;
 
-  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%23C68A52' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%23A17CFA' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 
-  --radius: 4px;
+  --radius: 12px; /* controls */
+  --radius-card: 18px; /* cards / panels */
   --pill: 999px;
   font-synthesis: none;
 }
@@ -88,7 +122,16 @@ body,
 body {
   font-family: "Switzer", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--text-primary);
-  background: var(--canvas);
+  /* near-black canvas with a soft violet atmospheric glow (institutional, not neon) */
+  background:
+    radial-gradient(
+      ellipse at 52% 48%,
+      rgba(86, 53, 155, 0.21) 0%,
+      rgba(35, 24, 67, 0.26) 34%,
+      rgba(8, 6, 15, 0) 70%
+    ),
+    var(--bg-main);
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;
   font-size: 13px;
@@ -126,7 +169,7 @@ body {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-  background: var(--canvas);
+  background: transparent; /* let the body's violet glow show through */
 }
 .zone1 {
   height: 48px;
@@ -246,7 +289,7 @@ select,
   font-family: inherit;
   padding: 0 10px;
   cursor: pointer;
-  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  transition: border-color 180ms ease, color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
 }
 select {
   appearance: none;
@@ -259,27 +302,32 @@ select {
 /* native dropdown list — force an on-theme dark popup (option rendering ignores var(),
    so use literal token values here) instead of falling back to a white OS list */
 select option {
-  background-color: #0d1520; /* --surface-2 */
-  color: #f4f6f8; /* --text-primary */
+  background-color: #171222; /* --surface-main */
+  color: #fffdf5; /* --text-primary */
 }
 select option:checked,
 select option:hover {
-  background-color: #101a27; /* --surface-hover */
-  color: #c68a52; /* --accent (copper) */
+  background-color: #211936; /* --surface-hover */
+  color: #a17cfa; /* --purple-primary */
 }
-/* secondary controls: soft blue hover (background-color only, to keep the select arrow) */
-select:hover,
+/* secondary control hover: violet border, background-color only (keeps the select arrow) */
+select:hover {
+  border-color: var(--border-strong);
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
 .btn:hover {
   border-color: var(--border-strong);
   background-color: var(--surface-hover);
   color: var(--text-primary);
+  transform: translateY(-1px);
 }
 select:disabled {
   color: var(--text-muted);
   cursor: default;
   opacity: 0.7;
 }
-/* primary action: dark fill, copper border/text, subtle copper hover tint */
+/* accent (compact secondary): violet outline + text — e.g. Export */
 .btn.accent {
   border-color: var(--accent-border);
   color: var(--accent);
@@ -287,7 +335,19 @@ select:disabled {
 .btn.accent:hover {
   border-color: var(--accent-border);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--purple-primary);
+}
+/* primary action: violet gradient */
+.btn.primary {
+  background: var(--btn-primary);
+  border-color: transparent;
+  color: var(--text-primary);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.3);
+}
+.btn.primary:hover {
+  background: var(--btn-primary);
+  border-color: var(--border-active);
+  color: var(--text-primary);
 }
 .btn.icon {
   padding: 0;
@@ -373,11 +433,16 @@ select:disabled {
   height: 16px;
   flex-shrink: 0;
 }
+/* active state: restrained violet border + glow (current selection only) */
 .tab.active {
-  color: var(--accent);
-  border-color: var(--accent-border);
-  border-bottom-color: var(--accent);
-  background: var(--surface-1);
+  color: var(--text-primary);
+  border-color: var(--border-active);
+  border-bottom-color: var(--purple-primary);
+  background: var(--selected-blue);
+  box-shadow: var(--active-glow);
+}
+.tab.active svg {
+  color: var(--purple-primary);
 }
 
 /* --- period navigation (design.md §7) --- */
@@ -407,9 +472,10 @@ select:disabled {
   background: var(--blue-tint);
 }
 .chip.active {
-  color: var(--accent);
-  border-color: var(--accent-border);
-  background: var(--accent-soft);
+  color: var(--purple-primary);
+  border-color: var(--border-active);
+  background: var(--purple-soft);
+  box-shadow: 0 0 0 1px rgba(161, 124, 250, 0.2), 0 0 16px rgba(124, 58, 237, 0.18);
 }
 .chip.ghost {
   color: var(--text-muted);
@@ -453,18 +519,18 @@ select:disabled {
   flex-shrink: 0;
 }
 .rail-item.active {
-  color: var(--accent);
+  color: var(--purple-primary);
 }
 .rail-item.active .rail-dot {
-  background: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--purple-primary);
+  box-shadow: 0 0 0 3px rgba(161, 124, 250, 0.12), 0 0 10px rgba(161, 124, 250, 0.4);
 }
 .rail-title {
   font-size: 11px;
-  font-weight: 500;
-  color: var(--text-muted);
+  font-weight: 600;
+  color: var(--purple-primary);
+  letter-spacing: 0.18em;
   padding: 0 8px 6px;
-  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -489,18 +555,13 @@ select:disabled {
 .card {
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: border-color 140ms ease, background 140ms ease;
-}
-/* card hover: slightly stronger border + faint blue tint (depth from contrast, not shadow) */
-.card:hover {
-  border-color: var(--border-strong);
-}
-.insight-card:hover {
-  background: linear-gradient(var(--blue-tint), var(--blue-tint)), var(--surface-1);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(14px);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
 }
 .card-h {
   display: flex;
@@ -616,10 +677,11 @@ thead th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--surface-2);
+  background: var(--surface-main);
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
   font-size: 11px;
+  letter-spacing: 0.02em;
   text-align: right;
   padding: 0 14px;
   height: 36px;
@@ -634,7 +696,7 @@ tbody td.oem {
   left: 0;
   z-index: 1;
   text-align: left;
-  background: var(--surface-1);
+  background: var(--surface-main); /* opaque sticky first column, visually stronger */
 }
 thead th.oem {
   z-index: 3;
@@ -648,22 +710,21 @@ tbody td {
   white-space: nowrap;
   border-bottom: 1px solid var(--border-subtle);
 }
-/* alternating rows: A = surface-1, B = row-alt (subtle, thin blue-grey dividers) */
-tbody tr:nth-child(even) td,
-tbody tr:nth-child(even) td.oem {
+/* alternating rows: A transparent, B a faint white wash (sticky OEM column stays opaque) */
+tbody tr:nth-child(even) td:not(.oem) {
   background: var(--row-alt);
 }
 tbody tr:hover td,
 tbody tr:hover td.oem {
-  background: var(--surface-hover);
+  background: var(--row-hover);
 }
-/* selected OEM row: subtle copper-tinted background + 2px copper left border (never a full fill) */
+/* selected OEM row: violet-tinted background + 2px violet left accent (never a full fill) */
 tbody tr.sel td,
 tbody tr.sel td.oem {
-  background: var(--accent-soft);
+  background: var(--purple-soft);
 }
 tbody tr.sel td.oem {
-  box-shadow: inset 2px 0 0 var(--accent);
+  box-shadow: inset 2px 0 0 var(--purple-primary);
 }
 tbody td.oem {
   font-weight: 500;
@@ -712,6 +773,42 @@ tr.total td.oem {
   background: var(--accent-soft);
   border: 1px solid var(--accent-border);
   color: var(--accent);
+}
+
+/* --- status dots: green=verified/complete, yellow=attention, purple=active, red=critical --- */
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--pill);
+  background: var(--neutral-dot);
+  flex-shrink: 0;
+}
+.dot.green {
+  background: var(--green-primary);
+  box-shadow: 0 0 0 3px rgba(0, 184, 138, 0.12), 0 0 10px rgba(0, 184, 138, 0.28);
+}
+.dot.yellow {
+  background: var(--yellow-primary);
+  box-shadow: 0 0 0 3px rgba(242, 178, 0, 0.12), 0 0 10px rgba(242, 178, 0, 0.24);
+}
+.dot.purple {
+  background: var(--purple-primary);
+  box-shadow: 0 0 0 3px rgba(161, 124, 250, 0.12);
+}
+.dot.red {
+  background: var(--pink-primary);
+  box-shadow: 0 0 0 3px rgba(255, 91, 136, 0.12);
+}
+.dot.inactive {
+  background: var(--neutral-dot);
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 
 /* --- insight strip (design.md §8.3) --- */
@@ -763,8 +860,12 @@ tr.total td.oem {
 .insight-card {
   cursor: pointer;
 }
+/* clickable card hover: soft lift + violet border/shadow (no content shift, no resize) */
 .insight-card:hover {
+  transform: translateY(-2px);
+  background: var(--surface-raised);
   border-color: var(--border-strong);
+  box-shadow: var(--hover-shadow);
 }
 
 /* --- source / provenance (design.md §8.4) --- */
@@ -919,13 +1020,14 @@ tr.total td.oem {
   min-width: 148px;
   padding: 8px 10px;
   background: var(--tooltip-bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--tooltip-border);
   border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   font-size: 11.5px;
 }
 .trend-tip .tt-name {
   font-weight: 600;
-  color: var(--accent);
+  color: var(--purple-primary);
   letter-spacing: -0.01em;
 }
 .trend-tip .tt-period {
@@ -1282,7 +1384,7 @@ body.cmp-resizing .cmp-divider-grip {
 }
 .cmp-notice.error {
   background: var(--negative-soft);
-  border-color: rgba(224, 107, 98, 0.3);
+  border-color: rgba(255, 92, 114, 0.35);
   color: var(--negative);
 }
 
@@ -1617,7 +1719,7 @@ button.title.as-home:focus-visible {
   padding: 40px 24px;
   text-align: center;
   color: var(--text-muted);
-  background: rgba(110, 144, 201, 0.03);
+  background: rgba(161, 124, 250, 0.04);
   border: 1.5px dashed var(--border-strong);
   border-radius: var(--radius);
   transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
@@ -1657,7 +1759,7 @@ button.title.as-home:focus-visible {
   justify-content: center;
   border: 1.5px dashed var(--accent-border);
   border-radius: var(--radius);
-  background: rgba(110, 144, 201, 0.12);
+  background: var(--purple-soft);
   transition: background 140ms ease, border-color 140ms ease, outline-color 140ms ease;
 }
 .cmp-drop-overlay-inner {

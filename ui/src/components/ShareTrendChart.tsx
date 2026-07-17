@@ -245,7 +245,7 @@ export function ShareTrendChart({
                     d={d}
                     fill="none"
                     style={{ stroke }}
-                    strokeWidth={isFocus ? 2.6 : 1.6}
+                    strokeWidth={isFocus ? 2.5 : 2}
                     strokeLinejoin="round"
                     strokeLinecap="round"
                   />
@@ -257,7 +257,7 @@ export function ShareTrendChart({
                 {/* latest-share label at the last defined point (collision-avoided y) */}
                 {li >= 0 && l.points[li].value != null && (
                   <>
-                    <circle cx={x(li)} cy={y(l.points[li].value!)} r={isFocus ? 3.2 : 2.6} style={{ fill: stroke }} />
+                    <circle cx={x(li)} cy={y(l.points[li].value!)} r={isFocus ? 4 : 3.2} style={{ fill: stroke }} />
                     <text
                       className="tlabel"
                       x={x(li) + 8}
@@ -274,9 +274,10 @@ export function ShareTrendChart({
             );
           })}
 
-          {/* enlarged active point */}
+          {/* enlarged active point with a subtle matching glow */}
           {hoverIdx != null && focusLine && focusLine.points[hoverIdx]?.value != null && (
             <>
+              <circle cx={x(hoverIdx)} cy={y(focusLine.points[hoverIdx]!.value!)} r={9} style={{ fill: FOCUS }} opacity={0.16} />
               <circle cx={x(hoverIdx)} cy={y(focusLine.points[hoverIdx]!.value!)} r={5} style={{ fill: FOCUS }} />
               <circle
                 cx={x(hoverIdx)}

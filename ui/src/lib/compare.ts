@@ -83,21 +83,20 @@ export interface CompareSeries {
   data: Partial<Record<PeriodType, CapPoint[]>>;
 }
 
-// Restrained blue family for comparison lines — eight distinct, sufficiently-bright cool
-// blues that all read against the near-black canvas (the dark --oem-blue/--ice/--steel-blue
-// surface tokens are deliberately NOT used here: they vanish as line colours). The focused
-// series is copper, applied at render time and never stored here.
+// Meaning-led series palette: purple (primary), green (positive), yellow (attention),
+// red (decline), grey (neutral), then brighter variants. The focused series is violet
+// (applied at render time, never stored here).
 export const SERIES_COLORS = [
-  "#d0e3ff", // pale blue
-  "#6e90c9", // soft blue
-  "#a7c1ea", // light periwinkle
-  "#5f86c4", // medium blue
-  "#8fa8d0", // steel blue (light)
-  "#b9cef2", // pale sky
-  "#7f9bd6", // cornflower
-  "#97aac8", // blue-grey
+  "var(--chart-1)", // purple
+  "var(--chart-2)", // green
+  "var(--chart-3)", // yellow
+  "var(--chart-4)", // red
+  "var(--chart-neutral)", // grey
+  "var(--purple-strong)",
+  "var(--green-bright)",
+  "var(--yellow-bright)",
 ];
-export const FOCUS_COLOR = "var(--chart-focus)"; // copper
+export const FOCUS_COLOR = "var(--chart-focus)"; // violet
 
 export const MAX_SERIES = 8;
 export const WARN_SERIES = 6;

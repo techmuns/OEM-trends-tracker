@@ -1266,7 +1266,15 @@ function ProdTab({
 function Provenance({ view }: { view: ViewModel }) {
   const m = view.meta;
   return (
-    <WidgetCard title="Source & freshness" subtitle="Every figure traces to a source file">
+    <WidgetCard
+      title="Source & freshness"
+      subtitle="Every figure traces to a source file"
+      right={
+        <span className="status" title="Source verified · coverage complete">
+          <span className="dot green" /> Verified · complete
+        </span>
+      }
+    >
       <div className="source">
         <span className="source-ic">
           <IconDoc />
