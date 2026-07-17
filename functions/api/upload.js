@@ -29,11 +29,16 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "Could not read the upload." }, 400);
   }
   const category = String(form.get("category") || "ALL").toUpperCase();
+  const year = String(form.get("year") || "").replace(/[^0-9]/g, "").slice(0, 4);
   const files = form.getAll("file").filter((f) => f && typeof f === "object" && f.name);
   if (!files.length) return json({ error: "No file was attached." }, 400);
   if (files.length > 4) return json({ error: "Please upload at most 4 files at once." }, 400);
 
-  const tag = category === "SIAM" ? "" : `VAHAN-${CATS.includes(category) ? category : "ALL"}-`;
+  // Stamp the segment and the year into the committed filename. The year keeps different years'
+  // files distinct (so one never overwrites another); the pipeline still reads the true year
+  // from inside the workbook. SIAM self-splits by category, so it carries no segment tag.
+  const yr = year ? `${year}-` : "";
+  const tag = category === "SIAM" ? `SIAM-${yr}` : `VAHAN-${CATS.includes(category) ? category : "ALL"}-${yr}`;
   const committed = [];
   for (const f of files) {
     if (!/\.xlsx$/i.test(f.name)) return json({ error: `Only .xlsx files are accepted (${f.name}).` }, 400);

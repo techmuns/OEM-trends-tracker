@@ -381,7 +381,7 @@ function Dashboard({
           right={<DockedCompareWorkspace />}
         />
       </main>
-      <UploadPanel open={uploadOpen} onClose={() => setUploadOpen(false)} />
+      <UploadPanel open={uploadOpen} categories={categories} onClose={() => setUploadOpen(false)} />
       <DataCoveragePanel
         open={coverageOpen}
         categories={categories}

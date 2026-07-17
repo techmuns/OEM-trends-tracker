@@ -1477,6 +1477,17 @@ button.title.as-home:focus-visible {
   border-radius: var(--radius);
   padding: 8px 10px;
 }
+/* green = you're adding something new; amber = already loaded, blocked */
+.upl-note.ok {
+  color: var(--positive);
+  background: var(--positive-soft);
+  border-color: rgba(79, 183, 131, 0.25);
+}
+.upl-note.warn {
+  color: var(--amber);
+  background: var(--amber-soft);
+  border-color: var(--amber-border);
+}
 .upl-files {
   font-size: 11px;
   color: var(--text-muted);

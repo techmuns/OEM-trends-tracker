@@ -100,6 +100,10 @@ def test_filename_category_token_routes_to_the_right_tab() -> None:
     assert _vahan_category(Path("VAHAN_PV_fuel_2026.xlsx")) == "PV"
     assert _vahan_category(Path("VAHAN2W_maker.xlsx")) == "2W"
     assert _vahan_category(Path("VAHAN-CV-maker.xlsx")) == "CV"
+    # the uploader stamps a year after the class token — routing must still see the class
+    assert _vahan_category(Path("VAHAN-2W-2026-reportTable.xlsx")) == "2W"
+    assert _vahan_category(Path("VAHAN-PV-2027-reportTable1.xlsx")) == "PV"
+    assert _vahan_category(Path("VAHAN-ALL-2026-reportTable.xlsx")) == "ALL"
     # no token -> the unfiltered all-vehicle export
     assert _vahan_category(Path("VAHAN_Maker_2026.xlsx")) == "ALL"
     assert _vahan_category(Path("reportTable.xlsx")) == "ALL"
