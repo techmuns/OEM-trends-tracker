@@ -8,6 +8,12 @@
 // selected — you can only add data that isn't in yet. To add an existing dataset again, pick a
 // year you don't have (e.g. next year), which unlocks it. This stops the same year/segment
 // being uploaded twice and the sources getting mixed up.
+//
+// Upload is narrated live so the screen never feels stuck: the file bytes transfer with a
+// determinate progress bar (0→100%), then flip to an indeterminate "processing on the server"
+// sweep while the Function commits + kicks ingest, and each file chip animates from a spinner
+// to a green check. Real transfer progress needs XMLHttpRequest (fetch exposes none), so the
+// POST uses XHR.
 
 import { useEffect, useMemo, useState } from "react";
 import type { CategoryInfo } from "../lib/types";
@@ -23,6 +29,7 @@ const OPTIONS: Opt[] = [
 ];
 
 type Tone = "idle" | "busy" | "ok" | "err";
+type Progress = { pct: number; phase: "transfer" | "processing" };
 
 // Does a loaded dataset already include this calendar year? (coverage_start..latest_period)
 function coversYear(cat: CategoryInfo, year: number): boolean {
@@ -61,22 +68,39 @@ export function UploadPanel({
   const [category, setCategory] = useState(() => (OPTIONS.find((o) => !isLoaded(o, currentYear)) ?? OPTIONS[0]).value);
   const [files, setFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<{ tone: Tone; msg: string }>({ tone: "idle", msg: "" });
+  const [progress, setProgress] = useState<Progress | null>(null);
 
   const selected = OPTIONS.find((o) => o.value === category) ?? OPTIONS[0];
   const isVahan = category !== "SIAM";
   const selectedLoaded = isLoaded(selected, year);
   const allFree = OPTIONS.filter((o) => !isLoaded(o, year));
 
+  const busy = status.tone === "busy";
+  const done = status.tone === "ok";
+  // Determinate only once real transfer bytes are reported; before that (preparing) and after
+  // (server processing) the bar sweeps indeterminately so there is always motion — the upload
+  // never looks frozen, even when the browser emits no progress events.
+  const determinate = progress?.phase === "transfer" && progress.pct > 0;
+
+  // Any interaction with the form after a run clears the previous result, so the panel never
+  // shows a stale "uploaded" banner next to a fresh pick.
+  const reset = () => {
+    setStatus({ tone: "idle", msg: "" });
+    setProgress(null);
+  };
+
   // When the year changes so the current pick is now already-loaded, hop to the first dataset
   // that can still be added for that year (so the panel never sits on a blocked pick).
   useEffect(() => {
     if (selectedLoaded && allFree.length > 0) setCategory(allFree[0].value);
+    reset();
+    setFiles([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year]);
 
   if (!open) return null;
 
-  const submit = async () => {
+  const submit = () => {
     if (selectedLoaded) {
       setStatus({ tone: "err", msg: `${selected.short} is already loaded for ${year}. Pick a dataset or year you don't have yet.` });
       return;
@@ -85,31 +109,62 @@ export function UploadPanel({
       setStatus({ tone: "err", msg: "Choose a file first." });
       return;
     }
-    setStatus({ tone: "busy", msg: "Uploading…" });
+
+    const noun = `${files.length} file${files.length > 1 ? "s" : ""}`;
+    setStatus({ tone: "busy", msg: `Preparing ${noun}…` });
+    setProgress({ pct: 0, phase: "transfer" });
+
     const fd = new FormData();
     fd.append("category", category);
     fd.append("year", String(year));
     for (const f of files) fd.append("file", f);
-    try {
-      const r = await fetch("/api/upload", { method: "POST", body: fd });
-      if (r.ok) {
-        const j = await r.json().catch(() => ({}));
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/upload");
+
+    // Phase 1 — bytes leaving the browser. Determinate, so the bar fills to a real number.
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      const pct = Math.min(99, Math.round((e.loaded / e.total) * 100));
+      setProgress({ pct, phase: "transfer" });
+      setStatus({ tone: "busy", msg: `Uploading ${noun}… ${pct}%` });
+    };
+    // Phase 2 — all bytes sent; the Function is now committing + kicking ingest. We can't
+    // measure that, so switch to an indeterminate sweep and say what's happening.
+    xhr.upload.onload = () => {
+      setProgress({ pct: 100, phase: "processing" });
+      setStatus({ tone: "busy", msg: "Processing on the server…" });
+    };
+
+    xhr.onload = () => {
+      setProgress(null);
+      const s = xhr.status;
+      const j = (() => {
+        try {
+          return JSON.parse(xhr.responseText);
+        } catch {
+          return {} as Record<string, unknown>;
+        }
+      })();
+      if (s >= 200 && s < 300) {
         setStatus({
           tone: "ok",
           msg: j.ingestTriggered
             ? "Uploaded — ingest is running. The tab updates in a few minutes."
             : "Uploaded. It will appear after the next ingest run.",
         });
-        setFiles([]);
-      } else if (r.status === 501 || r.status === 404) {
+      } else if (s === 501 || s === 404) {
         setStatus({ tone: "err", msg: "In-dashboard upload isn't set up yet — ask your admin to finish the one-time setup." });
       } else {
-        const j = await r.json().catch(() => ({}));
-        setStatus({ tone: "err", msg: (j.error || `Upload failed (${r.status}).`).slice(0, 200) });
+        setStatus({ tone: "err", msg: String(j.error || `Upload failed (${s}).`).slice(0, 200) });
       }
-    } catch {
+    };
+    xhr.onerror = () => {
+      setProgress(null);
       setStatus({ tone: "err", msg: "Upload isn't reachable here — this works on the live dashboard, not in local preview." });
-    }
+    };
+
+    xhr.send(fd);
   };
 
   return (
@@ -137,7 +192,15 @@ export function UploadPanel({
         <label className="upl-l" htmlFor="upl-cat">
           What is this file?
         </label>
-        <select id="upl-cat" value={category} onChange={(e) => setCategory(e.target.value)}>
+        <select
+          id="upl-cat"
+          value={category}
+          onChange={(e) => {
+            setCategory(e.target.value);
+            reset();
+            setFiles([]);
+          }}
+        >
           {OPTIONS.map((o) => {
             const loaded = isLoaded(o, year);
             return (
@@ -176,17 +239,55 @@ export function UploadPanel({
           type="file"
           accept=".xlsx"
           multiple={isVahan}
-          disabled={selectedLoaded}
-          onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+          disabled={selectedLoaded || busy}
+          onChange={(e) => {
+            setFiles(Array.from(e.target.files ?? []));
+            reset();
+          }}
         />
-        {files.length > 0 && <div className="upl-files">{files.map((f) => f.name).join(", ")}</div>}
+
+        {files.length > 0 && (
+          <div className="upl-files">
+            {files.map((f) => (
+              <span key={f.name} className={`upl-file${busy ? " up" : ""}${done ? " done" : ""}`}>
+                <span className="upl-file-ic" aria-hidden="true">
+                  {done ? "✓" : busy ? <span className="upl-spin" /> : "▤"}
+                </span>
+                <span className="upl-file-nm">{f.name}</span>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {busy && (
+          <div
+            className="upl-prog"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={determinate ? progress!.pct : undefined}
+          >
+            <div
+              className={`upl-prog-bar${determinate ? "" : " indet"}`}
+              style={determinate ? { width: `${progress!.pct}%` } : undefined}
+            />
+          </div>
+        )}
 
         <div className="upl-actions">
-          <button className="btn accent" onClick={submit} disabled={status.tone === "busy" || selectedLoaded}>
-            ↥ Upload
+          <button className="btn accent" onClick={submit} disabled={busy || done || selectedLoaded}>
+            {busy ? (
+              <>
+                <span className="upl-spin" /> Uploading…
+              </>
+            ) : done ? (
+              "✓ Uploaded"
+            ) : (
+              "↥ Upload"
+            )}
           </button>
           <button className="btn" onClick={onClose}>
-            Cancel
+            {done ? "Close" : "Cancel"}
           </button>
         </div>
 
