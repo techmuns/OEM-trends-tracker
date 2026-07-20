@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta, timezone
+
+from pipeline.aggregate.periods import fiscal_quarter_of, fiscal_year_of
 from pipeline.build_view import build_view
-from pipeline.contract.models import Bundle
+from pipeline.contract.constants import INDUSTRY_TOTAL_CANONICAL
+from pipeline.contract.models import Bundle, ContractRow
 
 META = {
     "generated_at": "2026-07-15T10:00:00+05:30",
@@ -11,6 +15,40 @@ META = {
     "snapshot_id": None,
     "notes": "t",
 }
+_IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def _ind_row(d: date, powertrain: str, value: float) -> ContractRow:
+    """A minimal industry-total row for exercising the penetration math directly."""
+    return ContractRow(
+        period_date=d,
+        period_type="month",
+        fiscal_year=fiscal_year_of(d),
+        fiscal_quarter=fiscal_quarter_of(d),
+        category="2W",
+        segment=None,
+        sub_segment=None,
+        company_canonical=INDUSTRY_TOTAL_CANONICAL,
+        company_raw="Total Domestic Two Wheelers",
+        flow="domestic",
+        powertrain=powertrain,
+        geography="IN",
+        metric="units",
+        value=value,
+        unit="units",
+        source="SIAM",
+        source_file="f.xlsx",
+        source_period="2025-12",
+        native_frequency="month",
+        calc_status="reported",
+        revision=0,
+        ingest_date=datetime(2026, 7, 15, tzinfo=_IST),
+        confidence="high",
+        is_superseded=False,
+        is_partial=False,
+        periods_present=None,
+        periods_expected=None,
+    )
 
 
 def _view(bundle: Bundle) -> dict:
@@ -95,6 +133,23 @@ def test_ev_only_maker_total_covers_ev_and_ice_never_negative(real_parse) -> Non
         assert allm[k]["v"] >= ev_pt["v"] - 0.5  # total covers EV (all ⊇ ev)
         assert abs(icem[k]["v"]) <= 0.5  # a pure-EV maker has zero ICE, not a negative
     assert "Ather Energy" in v["meta"]["ev_only_makers"]
+
+
+def test_ev_penetration_matches_denominator_to_ev_months() -> None:
+    """When the industry total runs longer than its EV coverage (the real 2W case: `all`
+    extends to 2026-05 via File 2 while EV ends 2025-12), annual penetration must divide EV by
+    the total over the SAME EV-covered months — not by the full 12-month total, which would
+    understate it (the 3.46% -> 4.71% FY26 correction)."""
+    months = [date(2024, m, 1) for m in range(4, 13)] + [date(2025, m, 1) for m in range(1, 4)]
+    rows: list[ContractRow] = []
+    for i, d in enumerate(months):
+        rows.append(_ind_row(d, "all", 100.0))  # total every month of FY25
+        if i < 9:  # EV only Apr..Dec 2024; Jan..Mar have a total but no EV figure
+            rows.append(_ind_row(d, "ev", 10.0))
+    v = build_view(rows, META, "2W")
+    fy = v["ev_penetration"]["domestic"]["year"]["FY25"]
+    assert fy is not None
+    assert abs(fy - (90.0 / 900.0)) < 1e-9  # 9mo EV / 9mo total, never 90/1200 = 0.075
 
 
 def test_yoy_from_zero_is_null(bundle: Bundle) -> None:

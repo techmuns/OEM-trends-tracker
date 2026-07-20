@@ -820,8 +820,9 @@ function SalesTab({
   const extra = hoverOem && !baseNames.includes(hoverOem) ? [hoverOem] : [];
   const trendLines = buildTrendLines(view, [...baseNames, ...extra], baseNames, "domestic", "all", pt, winAxis, axis, "share");
 
-  // insights from precomputed rows
-  const eligible = rows.filter((r) => r.chg !== null || r.yoy !== null);
+  // insights from precomputed rows. "Others" is the transparent long-tail residual, not a
+  // single competitor — never crown it top share gainer/loser or fastest-growing OEM.
+  const eligible = rows.filter((r) => r.company !== "Others" && (r.chg !== null || r.yoy !== null));
   const gainer = [...eligible].sort((a, b) => (b.chg ?? -9) - (a.chg ?? -9))[0];
   const loser = [...eligible].sort((a, b) => (a.chg ?? 9) - (b.chg ?? 9))[0];
   const fastest = [...eligible].filter((r) => r.yoy !== null).sort((a, b) => (b.yoy ?? -9) - (a.yoy ?? -9))[0];
@@ -1103,8 +1104,17 @@ function ProdTab({
   // A registrations source (VAHAN) reports neither exports nor production. Say so plainly
   // instead of rendering an empty table + unavailable production side by side.
   const hasExports = view.flows.includes("export");
-  const prodNative = view.meta.has_production && view.meta.native_frequency === "quarter";
-  if (!hasExports && !prodNative) {
+  const quarterly = view.meta.native_frequency === "quarter";
+  const prodSupported = view.meta.has_production && quarterly;
+  const exp = buildTable(view, { flow: "export", powertrain: "all", periodType: pt, periodKey: key, totalLabel: TOTAL });
+  // Rules of Hooks: declare this toggle on EVERY render — before the exports/production
+  // unavailable early-return below, never after it — or the hook order shifts for a source
+  // (VAHAN) that takes that branch, which React forbids.
+  const [metric, setMetric] = useState<"exports" | "production">(() =>
+    prodSupported && exp.rows.length === 0 ? "production" : "exports",
+  );
+
+  if (!hasExports && !prodSupported) {
     return (
       <Unavailable title={`Exports & production are not reported by ${view.meta.source}`}>
         {view.meta.source} reports {basisOf(view)} only — there is no export or production basis in this source. Use
@@ -1112,23 +1122,16 @@ function ProdTab({
       </Unavailable>
     );
   }
-  const exp = buildTable(view, { flow: "export", powertrain: "all", periodType: pt, periodKey: key, totalLabel: TOTAL });
 
   // Production is featured only where it is a proper source-reported series — Commercial
   // Vehicles (quarterly-native). Other categories (2W's limited add-on, PV, 3W) render an
   // honest unavailable state rather than a thin/zero table. Never derive monthly from quarterly.
-  const quarterly = view.meta.native_frequency === "quarter";
-  const prodSupported = view.meta.has_production && quarterly;
   const prodFirst = view.meta.production_first_period;
   const prodAxis = axis.filter((p) => !prodFirst || p.date >= prodFirst);
   const prodPeriod = prodSupported ? prodAxis.find((p) => p.key === key) ?? prodAxis[prodAxis.length - 1] : undefined;
   const prod = prodPeriod
     ? buildTable(view, { flow: "production", powertrain: "all", periodType: pt, periodKey: prodPeriod.key, totalLabel: TOTAL })
     : { rows: [], total: null };
-
-  const [metric, setMetric] = useState<"exports" | "production">(() =>
-    prodSupported && exp.rows.length === 0 ? "production" : "exports",
-  );
   const isExports = metric === "exports";
   const win = trendWindow(pt, rangeIdx);
 

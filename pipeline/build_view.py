@@ -201,8 +201,13 @@ def build_view(rows: Sequence[ContractRow], meta_src: dict, category: str = "2W"
         for pt in [p for p, _ in pt_specs]:
             m: dict[str, float | None] = {}
             for key, dates in group_periods(ind_all, pt).items():
-                a = sum(ind_all[d] for d in dates)
-                e = matched_sum(ind_ev, dates)
+                # penetration = ev / all over the SAME months. Restrict the denominator to the
+                # months that actually carry an EV figure, so a period where EV coverage begins
+                # mid-way is not an EV numerator over a full ICE+EV denominator (which would
+                # understate penetration). Where EV covers the whole period this is unchanged.
+                ev_dates = [d for d in dates if d in ind_ev]
+                e = sum(ind_ev[d] for d in ev_dates) if ev_dates else None
+                a = sum(ind_all[d] for d in ev_dates) if ev_dates else None
                 m[key] = (e / a) if (e is not None and a) else None
             ev_penetration[f][pt] = m
 
