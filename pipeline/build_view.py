@@ -116,6 +116,21 @@ def build_view(rows: Sequence[ContractRow], meta_src: dict, category: str = "2W"
                 ind_ev[d] += v
         if ind_ev:
             mm[(INDUSTRY_TOTAL_CANONICAL, f, "ev")] = dict(ind_ev)
+        # enforce all ⊇ ev at the maker level. A pure-EV maker (e.g. Ather, Okinawa) is
+        # reported in the segmented block at 0 (or absent): the fuel-agnostic Scooter/Motorcycle
+        # segment totals never fold in its EV volume, which lives only in the EV block. The
+        # adapter's stated invariant is that `all` includes `ev`; where a maker's segmented
+        # `all` falls short of its `ev`, its true total IS that EV volume (all-electric). Left
+        # unreconciled, `all` stays 0 (so the maker shows 0 total and 0% share despite real
+        # sales) and derived ICE = all − ev goes negative. Lift `all` up to `ev` per month.
+        for c in makers:
+            evm = mm.get((c, f, "ev"))
+            if not evm:
+                continue
+            allm = mm.setdefault((c, f, "all"), {})
+            for d, ev_v in evm.items():
+                if ev_v > allm.get(d, 0.0):
+                    allm[d] = ev_v
         # derived ice = all - ev, wherever both exist (maker + industry)
         for c in makers | {INDUSTRY_TOTAL_CANONICAL}:
             allm = mm.get((c, f, "all"))
@@ -161,6 +176,10 @@ def build_view(rows: Sequence[ContractRow], meta_src: dict, category: str = "2W"
                 )
                 pdata[key] = {
                     "v": value,
+                    # matched-elapsed prior (the SAME basis the yoy uses): for a partial
+                    # current period this is the prior year's SAME months (QTD vs QTD), not the
+                    # full prior period — so the UI's prior column never contradicts the yoy.
+                    "prior": prior,
                     "yoy": yoy(value, prior),
                     "share": share,
                     "chg": (share - pshare) if (share is not None and pshare is not None) else None,

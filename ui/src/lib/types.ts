@@ -7,6 +7,7 @@ export type Powertrain = "all" | "ev" | "ice";
 
 export interface Point {
   v: number | null; // value
+  prior: number | null; // matched-elapsed prior-year value (QTD/YTD basis, pairs with yoy)
   yoy: number | null; // fraction, e.g. 0.083 = +8.3%
   share: number | null; // fraction within reported universe of same flow+powertrain
   chg: number | null; // share change in percentage points (fraction)

@@ -21,6 +21,7 @@ version: 1
 companies:
   - canonical: Ather Energy
     category_hint: 2W
+    is_ev_only: true # pure-EV 2W maker — volume is all electric, no ICE line
     aliases:
       - Ather Energy Pvt. Ltd
 
@@ -55,6 +56,7 @@ companies:
 
   - canonical: Okinawa Autotech
     category_hint: 2W
+    is_ev_only: true # pure-EV 2W maker — volume is all electric, no ICE line
     aliases:
       - Okinawa Autotech Pvt. Ltd
 

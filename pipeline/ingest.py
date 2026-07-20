@@ -164,8 +164,11 @@ def process_category(category: str, adapter: SourceAdapter, ts: datetime) -> int
         )
         return 1
 
-    save_normalized(category, store_rows)
+    # Write the immutable snapshot FIRST, before mutating the canonical store. If the
+    # snapshot write fails (e.g. an id collision), the store is left untouched — a failed
+    # ingest must never poison the store nor leave the store and the live view inconsistent.
     write_snapshot(store_rows, ts, category=category)
+    save_normalized(category, store_rows)
     build_bundle(
         store_rows,
         generated_at=ts,
@@ -280,22 +283,39 @@ def _process_vahan_batch(paths: list[Path], category: str, ts: datetime) -> int:
     return 0
 
 
-def run_incoming(incoming_dir: Path = INCOMING_DIR, ts: datetime = INGEST_TS) -> int:
+# Distinct snapshots share one wall-clock second only because the timestamp is injected;
+# space each processing unit's snapshot id apart so two source files that carry the SAME
+# category never write the same (immutable) snapshot id and collide. Deterministic offset,
+# so a fixed base ts still yields a reproducible audit trail.
+_SNAPSHOT_STEP = timedelta(minutes=1)
+
+
+def run_incoming(incoming_dir: Path = INCOMING_DIR, ts: datetime | None = None) -> int:
+    # Production (the cron / upload webhook) passes no ts and gets the real wall clock, so a
+    # recurring monthly file never reuses last month's frozen snapshot id. Tests inject a
+    # fixed base for deterministic output.
+    base = ts if ts is not None else datetime.now(_IST)
     files = sorted(p for p in incoming_dir.glob("*.xlsx") if p.is_file())
     if not files:
         print("[ingest] no files in incoming/ — nothing to do.")
         return 0
     vahan_files = [f for f in files if _is_vahan(f)]
     other_files = [f for f in files if f not in vahan_files]
+    # Each source file / VAHAN batch is a distinct accepted ingest and gets its own snapshot
+    # timestamp (base + N steps): File 1 (baseline) and File 2 (monthly extension) both carry
+    # a 2W category, so a shared timestamp would collide on snapshot-2w-<ts>.json.
     worst = 0
+    unit = 0
     for path in other_files:
-        worst = max(worst, process_file(path, ts))
+        worst = max(worst, process_file(path, base + _SNAPSHOT_STEP * unit))
+        unit += 1
     # group VAHAN files by their filename category token; each category ingests independently
     by_cat: dict[str, list[Path]] = defaultdict(list)
     for f in vahan_files:
         by_cat[_vahan_category(f)].append(f)
     for category, paths in sorted(by_cat.items()):
-        worst = max(worst, _process_vahan_batch(paths, category, ts))
+        worst = max(worst, _process_vahan_batch(paths, category, base + _SNAPSHOT_STEP * unit))
+        unit += 1
     return worst
 
 

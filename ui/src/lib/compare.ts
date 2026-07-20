@@ -108,26 +108,36 @@ export function dedupeKey(s: Pick<CompareSeries, "category" | "company" | "metri
 
 let SEQ = 0;
 
-function metricUniverse(view: ViewModel, metric: MetricKey): string {
-  if (metric === "ev_share" || metric === "ev_penetration") return "Share within reported EV universe";
-  if (metric === "market_share") return view.meta.share_caveat; // "Share within reported SIAM universe"
-  if (metric === "exports") return `${view.meta.source} wholesale dispatches (exports)`;
-  if (metric === "production") return "Source-reported quarterly production";
-  return `${view.meta.source} wholesale dispatches (domestic)`;
+// SIAM measures wholesale dispatches; VAHAN measures registrations. The two bases are never
+// mixed or relabelled as each other, so every human-facing string derives its basis noun from
+// the view's source rather than hardcoding "dispatches".
+function basisNoun(source: string): string {
+  return source === "VAHAN" ? "registrations" : "wholesale dispatches";
 }
 
-function metricDefinition(metric: MetricKey): string {
+function metricUniverse(view: ViewModel, metric: MetricKey): string {
+  const basis = basisNoun(view.meta.source);
+  if (metric === "ev_share" || metric === "ev_penetration") return "Share within reported EV universe";
+  if (metric === "market_share") return view.meta.share_caveat; // "Share within reported SIAM universe"
+  if (metric === "exports") return `${view.meta.source} ${basis} (exports)`;
+  if (metric === "production") return "Source-reported quarterly production";
+  return `${view.meta.source} ${basis} (domestic)`;
+}
+
+function metricDefinition(metric: MetricKey, source: string): string {
+  const regs = source === "VAHAN";
+  const basis = basisNoun(source);
   switch (metric) {
     case "sales":
-      return "Wholesale dispatches (domestic), all powertrains.";
+      return `${regs ? "Registrations" : "Wholesale dispatches"} (domestic), all powertrains.`;
     case "exports":
       return "Wholesale export dispatches, all powertrains.";
     case "production":
       return "Source-reported production volume. Not derived from monthly figures.";
     case "ev_volume":
-      return "Electric wholesale dispatches (domestic).";
+      return `Electric ${basis} (domestic).`;
     case "market_share":
-      return "OEM share of domestic dispatches within the reported universe.";
+      return `OEM share of domestic ${regs ? "registrations" : "dispatches"} within the reported universe.`;
     case "ev_share":
       return "OEM share within the reported EV universe.";
     case "ev_penetration":
@@ -235,7 +245,7 @@ export function buildSeries(view: ViewModel, company: string, metric: MetricKey)
     unitGroup: def.group,
     source: view.meta.source,
     universeLabel: metricUniverse(view, metric),
-    metricDefinition: metricDefinition(metric),
+    metricDefinition: metricDefinition(metric, view.meta.source),
     nativeFrequency,
     frequencies,
     lastUpdated: view.meta.generated_at,

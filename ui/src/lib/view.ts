@@ -90,7 +90,10 @@ function rowFrom(
   return {
     company,
     cur: cur?.v ?? null,
-    prior: prior?.v ?? null,
+    // The matched-elapsed prior stored on the CURRENT point pairs with its yoy (QTD-vs-QTD for a
+    // partial period). Fall back to the prior period's own value only when there is no current
+    // point (e.g. a company that has since exited).
+    prior: cur?.prior ?? prior?.v ?? null,
     yoy: cur?.yoy ?? null,
     share: cur?.share ?? null,
     chg: cur?.chg ?? null,

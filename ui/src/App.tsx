@@ -994,9 +994,9 @@ function EvTab({
     const lines = buildTrendLines(view, [focus], [focus], "domestic", "ev", pt, winAxis, evAxis, "share");
     chart = {
       title: `EV Share Trend — ${shortName(focus)}`,
-      info: "EV share is calculated within the reported EV universe (SIAM EV makers). Pure-EV makers outside SIAM are excluded, so this understates EV.",
+      info: `EV share is calculated within the reported EV universe (${view.meta.source} EV makers).${isRegs(view) ? " Battery-electric only (PURE EV + ELECTRIC BOV); hybrids and hydrogen are not counted as EV." : " Pure-EV makers outside SIAM are excluded, so this understates EV."}`,
       subtitle: "OEM share within the reported EV universe over time.",
-      footer: "Source: SIAM wholesale dispatches · EV share within reported EV universe",
+      footer: `Source: ${view.meta.source} ${basisOf(view)} · EV share within reported EV universe`,
       lines,
       valueKind: "share",
       yLabel: "EV-universe share (%)",
