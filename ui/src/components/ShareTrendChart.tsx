@@ -5,10 +5,35 @@
 // restores the default view. Plots either shares (%) or absolute volumes (`valueKind`), with
 // an identical tooltip. Only subtle 120-160ms opacity/stroke transitions — no shadows.
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { fmtPct, fmtPp, fmtShare, fmtUnits, fmtUnitsCompact } from "../lib/format";
 import type { CompareSeries } from "../lib/compare";
 import { dragProps } from "../lib/dragfx";
+
+// Measure an element's live content width via ResizeObserver. The chart uses this to render its
+// SVG at real pixel dimensions (viewBox = measured px, so 1 user-unit = 1 CSS px). That keeps
+// every axis tick, endpoint label and legend a CONSTANT, readable pixel size at any container
+// width — instead of a fixed viewBox that scales the whole drawing (and its text) up on wide
+// screens and down to an unreadable size on narrow ones. Falls back to a sensible default until
+// the first measurement lands (useLayoutEffect measures before paint, so there is no flash).
+function useMeasuredWidth<T extends HTMLElement>(fallback: number): [React.RefObject<T | null>, number] {
+  const ref = useRef<T>(null);
+  const [w, setW] = useState(fallback);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const apply = (next: number) => {
+      // round to whole px and ignore sub-pixel noise so we don't thrash on every scroll frame
+      const px = Math.round(next);
+      if (px > 0) setW((prev) => (Math.abs(prev - px) >= 1 ? px : prev));
+    };
+    apply(el.clientWidth);
+    const ro = new ResizeObserver((entries) => apply(entries[0].contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, w];
+}
 
 // Optional drag-to-compare wiring for legend items (chart series). Additive — the chart works
 // exactly as before when omitted.
@@ -66,21 +91,23 @@ export function ShareTrendChart({
 }) {
   const fmtVal = (v: number) => (valueKind === "share" ? fmtShare(v) : fmtUnitsCompact(v));
   const fmtTick = (v: number) => (valueKind === "share" ? (v * 100).toFixed(0) + "%" : fmtUnitsCompact(v));
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const [wrapRef, cw] = useMeasuredWidth<HTMLDivElement>(760);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [plotHover, setPlotHover] = useState<string | null>(null); // nearest line under cursor
   const [legendHover, setLegendHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
-  // Hero-panel geometry: the chart is the dominant left panel, so the viewBox is taller
-  // (≈2.2:1 vs the old ≈2.9:1) to give the trend a large, immediately readable plotting area.
-  // width scales to the container; height follows via the viewBox aspect ratio.
-  const W = 664;
-  const H = 300;
-  const padL = 58;
-  const padR = 150;
-  const padT = 18;
-  const padB = 46;
+  // Real-pixel geometry (see useMeasuredWidth): the viewBox width tracks the measured container
+  // so 1 unit = 1px and all chart text keeps a constant, readable size. Height is held within a
+  // readable band (≈340–408px) so the hero chart fills its card at every width without a fixed
+  // aspect ratio stretching it tall on wide screens. Paddings are real px, sized so the y-axis
+  // labels (left) and the endpoint value labels (right) never clip.
+  const W = Math.max(360, cw);
+  const H = Math.round(Math.min(408, Math.max(340, W * 0.4)));
+  const padL = 56;
+  const padR = 168;
+  const padT = 20;
+  const padB = 48;
 
   const labels = lines[0]?.points.map((p) => p.label) ?? [];
   const n = labels.length;
@@ -158,7 +185,7 @@ export function ShareTrendChart({
     })
     .filter((a): a is { name: string; baseY: number } => a !== null)
     .sort((a, b) => a.baseY - b.baseY);
-  const MIN_GAP = 13;
+  const MIN_GAP = 16;
   let prevY = -Infinity;
   for (const a of anchors) {
     const adj = Math.min(H - padB - 2, Math.max(padT + 6, Math.max(a.baseY, prevY + MIN_GAP)));
@@ -189,7 +216,7 @@ export function ShareTrendChart({
           {tickVals.map((tv, i) => (
             <g key={i}>
               <line x1={padL} x2={W - padR} y1={y(tv)} y2={y(tv)} style={{ stroke: "var(--chart-grid)" }} strokeWidth={1} />
-              <text x={padL - 10} y={y(tv) + 3} textAnchor="end" fontSize={10} style={{ fill: "var(--chart-axis)" }}>
+              <text x={padL - 10} y={y(tv) + 4} textAnchor="end" fontSize={12} style={{ fill: "var(--chart-axis)" }}>
                 {fmtTick(tv)}
               </text>
             </g>
@@ -198,7 +225,7 @@ export function ShareTrendChart({
           <text
             transform={`translate(15 ${padT + (H - padT - padB) / 2}) rotate(-90)`}
             textAnchor="middle"
-            fontSize={10}
+            fontSize={12}
             style={{ fill: "var(--chart-axis)" }}
             letterSpacing="0.02em"
           >
@@ -209,9 +236,9 @@ export function ShareTrendChart({
             <text
               key={i}
               x={x(i)}
-              y={H - 8}
+              y={H - 10}
               textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"}
-              fontSize={10}
+              fontSize={12}
               fontWeight={hoverIdx === i ? 600 : 400}
               style={{ fill: hoverIdx === i ? "var(--text-secondary)" : "var(--chart-axis)" }}
             >
@@ -263,9 +290,9 @@ export function ShareTrendChart({
                     <circle cx={x(li)} cy={y(l.points[li].value!)} r={isFocus ? 4 : 3.2} style={{ fill: stroke }} />
                     <text
                       className="tlabel"
-                      x={x(li) + 8}
-                      y={(latestY.get(l.name) ?? y(l.points[li].value!)) + 3}
-                      fontSize={10.5}
+                      x={x(li) + 9}
+                      y={(latestY.get(l.name) ?? y(l.points[li].value!)) + 4}
+                      fontSize={12.5}
                       fontWeight={isFocus ? 600 : 500}
                       style={{ fill: stroke }}
                     >
