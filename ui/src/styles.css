@@ -110,6 +110,93 @@
   font-synthesis: none;
 }
 
+/* ---- light theme: same tokens, warm cream/white/navy palette (toggled via [data-theme="light"]
+   on <html>). Semantic hues (purple/green/yellow/red) are kept, only the base neutrals change. ---- */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-main: #f3eee2;
+  --bg-deep: #ece4d2;
+  --bg-elevated: #ffffff;
+  --surface-main: #ffffff;
+  --surface-raised: #fffdf8;
+  --surface-hovercolor: #ece4d3;
+
+  --border-default: #e3dcc8;
+  --border-softc: rgba(22, 33, 62, 0.08);
+  --border-active: #7c3aed;
+
+  /* component aliases that are hardcoded (not var()-derived) in the base palette above, so
+     they need an explicit light-theme value too */
+  --surface-1: rgba(255, 255, 255, 0.92); /* card / table surface (surface-main @ 92%) */
+  --row-alt: rgba(22, 33, 62, 0.03); /* alternating table row: faint dark wash on light bg */
+  --selected-blue: rgba(255, 253, 248, 0.96); /* active tab background */
+
+  --purple-primary: #7c3aed;
+  --purple-strong: #6d28d9;
+  --purple-soft: rgba(124, 58, 237, 0.1);
+
+  --green-primary: #0f9d6e;
+  --green-bright: #0a8a5f;
+  --green-soft: rgba(15, 157, 110, 0.12);
+
+  --yellow-primary: #b8860b;
+  --yellow-bright: #9a6f00;
+  --yellow-soft: rgba(184, 134, 11, 0.12);
+
+  --pink-primary: #d63384;
+  --red-negative: #c8324a;
+
+  --text-primary: #16213e;
+  --text-secondary: #4b5568;
+  --text-muted: #7c8494;
+  --text-disabled: #b7bcc6;
+
+  --neutral-dot: #cfc9b8;
+  --grid-line: rgba(22, 33, 62, 0.07);
+  --divider: rgba(22, 33, 62, 0.08);
+
+  --header-bg: rgba(243, 238, 226, 0.86);
+  --tooltip-bg: #ffffff;
+  --tooltip-border: #ddd6c0;
+
+  --scrollbar-thumb: rgba(124, 58, 237, 0.25);
+
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%237C3AED' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(
+      ellipse at 52% 48%,
+      rgba(124, 58, 237, 0.06) 0%,
+      rgba(124, 58, 237, 0.03) 34%,
+      rgba(243, 238, 226, 0) 70%
+    ),
+    var(--bg-main);
+}
+:root[data-theme="light"] select {
+  color-scheme: light;
+}
+:root[data-theme="light"] select option {
+  background-color: #ffffff;
+  color: #16213e;
+}
+:root[data-theme="light"] select option:checked,
+:root[data-theme="light"] select option:hover {
+  background-color: #ece4d3;
+  color: #7c3aed;
+}
+:root[data-theme="light"] select optgroup {
+  background-color: #f3eee2;
+  color: #7c8494;
+}
+:root[data-theme="light"] .source-pill[data-source="SIAM"] {
+  color: #3a5a8c;
+}
+:root[data-theme="light"] .source-pill[data-source="SIAM"] .src-basis {
+  color: #3a5a8c;
+}
+
 * {
   box-sizing: border-box;
 }

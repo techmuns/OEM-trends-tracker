@@ -24,6 +24,8 @@ import {
   IconDoc,
   IconFactory,
   IconGrowth,
+  IconMoon,
+  IconSun,
   IconTrendDown,
   IconTrendUp,
   Loading,
@@ -31,6 +33,33 @@ import {
   Unavailable,
   WidgetCard,
 } from "./components/ui";
+
+// --- theme (dark/light toggle) ---
+type ThemeName = "dark" | "light";
+const THEME_KEY = "oem-tracker-theme";
+function getInitialTheme(): ThemeName {
+  return window.localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
+}
+// Applied once at module load (before first paint) so there's no dark→light flash on reload.
+document.documentElement.dataset.theme = getInitialTheme();
+
+function ThemeToggle() {
+  const [theme, setTheme] = useState<ThemeName>(getInitialTheme);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+  return (
+    <button
+      className="btn icon"
+      onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+      title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+      aria-label="Toggle light / dark theme"
+    >
+      {theme === "dark" ? <IconSun /> : <IconMoon />}
+    </button>
+  );
+}
 
 type Tab = "sales" | "ev" | "prod";
 
@@ -170,7 +199,10 @@ function Shell({ children, right }: { children: React.ReactNode; right?: React.R
     <div className="shell">
       <header className="zone1">
         <span className="title">OEM Tracker</span>
-        <div className="header-right">{right}</div>
+        <div className="header-right">
+          {right}
+          <ThemeToggle />
+        </div>
       </header>
       <main className="zone2">{children}</main>
     </div>
@@ -310,6 +342,7 @@ function Dashboard({
             ↧ Export
           </button>
           <CompareDockTab />
+          <ThemeToggle />
         </div>
       </header>
 
