@@ -1302,15 +1302,7 @@ function ProdTab({
 function Provenance({ view }: { view: ViewModel }) {
   const m = view.meta;
   return (
-    <WidgetCard
-      title="Source & freshness"
-      subtitle="Every figure traces to a source file"
-      right={
-        <span className="status" title="Source verified · coverage complete">
-          <span className="dot green" /> Verified · complete
-        </span>
-      }
-    >
+    <WidgetCard title="Source & freshness">
       <div className="source">
         <span className="source-ic">
           <IconDoc />
@@ -1321,31 +1313,12 @@ function Provenance({ view }: { view: ViewModel }) {
             <dd>{m.source} — {basisOf(view)}</dd>
           </div>
           <div>
-            <dt>Reported universe</dt>
-            <dd>{m.source_universe_label}</dd>
-          </div>
-          <div>
             <dt>Coverage</dt>
             <dd>
               {monthYear(m.coverage_start)} – {monthYear(m.latest_period)}
             </dd>
           </div>
-          <div>
-            <dt>Last updated</dt>
-            <dd>{new Date(m.generated_at).toLocaleString("en-GB")}</dd>
-          </div>
-          <div>
-            <dt>Snapshot</dt>
-            <dd>{m.snapshot_id ?? "—"}</dd>
-          </div>
-          <div>
-            <dt>Company history from</dt>
-            <dd>{monthYear(m.company_history_floor)}</dd>
-          </div>
         </dl>
-      </div>
-      <div className="caveat">
-        {m.share_caveat} {m.notes}
       </div>
     </WidgetCard>
   );
