@@ -119,39 +119,38 @@
 :root[data-theme="light"] {
   color-scheme: light;
 
-  /* the dark theme bakes its purple into every neutral surface, not just accents (--bg-main,
-     --surface-main etc. are all purple-tinted, not true grey/black) — these mirror that with
-     navy instead of purple, so navy is structurally pervasive here too */
-  --bg-main: #f3eee2;
-  --bg-deep: #e6e8ea;
-  --bg-elevated: #f7f9fc;
-  --surface-main: #f7f9fc;
-  --surface-raised: #f9fafc;
-  --surface-hovercolor: #e3e7ee;
+  /* refined steel-blue system (approved reference palette). Every neutral surface carries a
+     soft steel-blue tint so blue reads as the structural identity — bright, calm, premium —
+     the way the dark theme bakes purple into its surfaces. */
+  --bg-main: #f2f6fa; /* page background */
+  --bg-deep: #e3edf6; /* deeper surface */
+  --bg-elevated: #fafcfe; /* card surface */
+  --surface-main: #fafcfe; /* card / table Row-A surface */
+  --surface-raised: #ffffff; /* hovered-card lift */
+  --surface-hovercolor: #e3edf6; /* control hover */
 
-  --border-default: #c9ccd6;
-  --border-softc: rgba(22, 33, 62, 0.11);
-  --border-active: #2b5797;
+  --border-default: #c7d8e8; /* soft blue border */
+  --border-softc: rgba(23, 55, 94, 0.1);
+  --border-active: #1768c7; /* strong accent — selected-control borders */
 
   /* component aliases that are hardcoded (not var()-derived) in the base palette above, so
      they need an explicit light-theme value too */
-  --surface-1: rgba(247, 249, 252, 0.97); /* card / table surface — crisper vs. the ivory canvas */
-  --row-alt: rgba(43, 87, 151, 0.07); /* alternating table row: navy-toned band for rhythm */
-  --selected-blue: rgba(255, 253, 248, 0.96); /* active tab background */
+  --surface-1: rgba(250, 252, 254, 0.97); /* card / table surface */
+  --row-alt: #e3edf6; /* alternating table Row B */
+  --selected-blue: rgba(250, 252, 254, 0.97); /* active tab background */
 
-  /* softer, cooler-toned elevation for a light canvas — the dark theme's near-black shadow
-     values would read heavy/muddy here */
-  --card-shadow: 0 1px 2px rgba(22, 33, 62, 0.05), 0 10px 28px rgba(22, 33, 62, 0.09);
-  --active-glow: 0 0 0 1px rgb(var(--accent-rgb) / 0.35), 0 0 14px rgb(var(--accent-strong-rgb) / 0.14);
-  --hover-shadow: 0 14px 32px rgba(22, 33, 62, 0.14), 0 0 18px rgb(var(--accent-strong-rgb) / 0.16);
+  /* soft, cool-toned elevation for a light canvas */
+  --card-shadow: 0 1px 2px rgba(23, 55, 94, 0.05), 0 10px 28px rgba(23, 55, 94, 0.08);
+  --active-glow: 0 0 0 1px rgb(var(--accent-strong-rgb) / 0.4), 0 0 14px rgb(var(--accent-strong-rgb) / 0.14);
+  --hover-shadow: 0 14px 32px rgba(23, 55, 94, 0.13), 0 0 18px rgb(var(--accent-strong-rgb) / 0.16);
 
-  /* accent hue switches from the dark theme's violet to the navy blue from the reference
-     mockup — --accent-rgb/--accent-strong-rgb feed every rgba()/box-shadow glow above and
-     below automatically, so this is the only place the blue is defined. */
-  --purple-primary: #2b5797;
-  --purple-strong: #1e3a63;
-  --accent-rgb: 43 87 151;
-  --accent-strong-rgb: 30 58 99;
+  /* accent: medium steel blue is the identity colour; the stronger accent blue is reserved
+     for selected states, table headers and key chart lines. --accent-rgb/--accent-strong-rgb
+     feed every rgba()/glow above and below, so the hue lives in one place. */
+  --purple-primary: #2f6595; /* primary steel blue */
+  --purple-strong: #1768c7; /* strong accent blue */
+  --accent-rgb: 47 101 149;
+  --accent-strong-rgb: 23 104 199;
 
   --green-primary: #0b8259;
   --green-bright: #0a8a5f;
@@ -162,39 +161,42 @@
   --yellow-soft: rgba(184, 134, 11, 0.12);
 
   --pink-primary: #d63384;
-  --red-negative: #ad2740;
-  --negative-soft: rgba(173, 39, 64, 0.1);
+  --red-negative: #c0344b;
+  --negative-soft: rgba(192, 52, 75, 0.1);
 
-  --text-primary: #16213e;
-  --text-secondary: #4b5568;
-  --text-muted: #6c7690;
-  --text-disabled: #b7bcc6;
+  --text-primary: #17375e; /* main text — dark blue-grey, never pure black */
+  --text-secondary: #607995; /* secondary text */
+  --text-muted: #7c90a8;
+  --text-disabled: #aec0d2;
 
-  --neutral-dot: #c3c8d2;
-  --grid-line: rgba(22, 33, 62, 0.12);
-  --divider: rgba(22, 33, 62, 0.1);
+  --neutral-dot: #c0cfde;
+  --grid-line: rgba(47, 101, 149, 0.13); /* very pale blue-grey chart gridlines */
+  --divider: rgba(23, 55, 94, 0.09);
 
-  /* second/third-ranked OEM lines in the trend chart: a deeper muted blue + restrained gold,
-     kept distinct from both the navy accent (1st-ranked / selected) and the positive/negative
-     green-red used for deltas */
-  --chart-2: #4a6fa5;
+  /* chart series: strong accent blue (main / focused), teal (secondary), restrained gold
+     (tertiary) — matches the reference chart */
+  --chart-1: #1768c7;
+  --chart-2: #2c93a0;
+  --chart-focus: #1768c7;
+  --ev: #2c93a0; /* EV line — teal */
+  --ice: #7395b6; /* ICE line — muted steel blue */
 
-  /* solid navy header — the page's theme anchor (controls inside are restyled below) */
-  --header-bg: linear-gradient(180deg, #2b5797 0%, #244a80 100%);
-  --tooltip-bg: #f7f9fc;
-  --tooltip-border: #c9ccd6;
+  /* medium steel-blue header — the page's calm theme anchor (controls restyled below) */
+  --header-bg: linear-gradient(180deg, #35719f 0%, #2c5e8b 100%);
+  --tooltip-bg: #fafcfe;
+  --tooltip-border: #c7d8e8;
 
-  --btn-primary: linear-gradient(135deg, #1e3a63, #2b5797);
+  --btn-primary: linear-gradient(135deg, #2f6595, #1768c7);
 
-  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%232B5797' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%232F6595' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 :root[data-theme="light"] body {
   background:
     radial-gradient(
       ellipse at 52% 48%,
-      rgb(var(--accent-rgb) / 0.16) 0%,
-      rgb(var(--accent-rgb) / 0.08) 34%,
-      rgba(243, 238, 226, 0) 70%
+      rgb(var(--accent-rgb) / 0.09) 0%,
+      rgb(var(--accent-rgb) / 0.05) 34%,
+      rgba(242, 246, 250, 0) 70%
     ),
     var(--bg-main);
 }
@@ -202,23 +204,23 @@
   color-scheme: light;
 }
 :root[data-theme="light"] select option {
-  background-color: #f7f9fc;
-  color: #16213e;
+  background-color: #fafcfe;
+  color: #17375e;
 }
 :root[data-theme="light"] select option:checked,
 :root[data-theme="light"] select option:hover {
-  background-color: #e3e7ee;
-  color: #2b5797;
+  background-color: #e3edf6;
+  color: #1768c7;
 }
 :root[data-theme="light"] select optgroup {
-  background-color: #eceef1;
-  color: #6c7690;
+  background-color: #edf4fa;
+  color: #607995;
 }
 :root[data-theme="light"] .source-pill[data-source="SIAM"] {
-  color: #3a5a8c;
+  color: #2f6595;
 }
 :root[data-theme="light"] .source-pill[data-source="SIAM"] .src-basis {
-  color: #3a5a8c;
+  color: #2f6595;
 }
 
 /* ---- light-theme hierarchy: navy for the page title, card titles, table column headers and
@@ -236,7 +238,7 @@
   color: var(--text-secondary);
 }
 :root[data-theme="light"] .tab.active {
-  color: var(--purple-primary);
+  color: var(--purple-strong);
   font-weight: 600;
 }
 :root[data-theme="light"] tbody tr.sel td.oem {
@@ -244,16 +246,16 @@
 }
 
 /* ============================================================================
-   LIGHT THEME — navy-led visual identity. Colours / backgrounds / contrast only;
+   LIGHT THEME — steel-blue visual identity. Colours / backgrounds / contrast only;
    no layout, spacing, sizing, or structural change. All rules are
    [data-theme="light"] scoped, so the dark theme is completely untouched.
    ============================================================================ */
 
-/* --- 1. Header: solid navy anchor. Every control inside becomes a translucent-white
-   chip so the band reads as one elegant navy surface with readable controls. --- */
+/* --- 1. Header: medium steel-blue anchor. Every control inside becomes a translucent-white
+   chip so the band reads as one calm steel surface with readable controls. --- */
 :root[data-theme="light"] .zone1 {
-  border-bottom-color: #17335c;
-  box-shadow: 0 6px 20px rgba(22, 33, 62, 0.18);
+  border-bottom-color: #245079;
+  box-shadow: 0 6px 20px rgba(23, 55, 94, 0.16);
 }
 :root[data-theme="light"] .zone1 .title,
 :root[data-theme="light"] .zone1 button.title.as-home {
@@ -307,8 +309,8 @@
   color: #ffffff;
 }
 :root[data-theme="light"] .zone1 .seg button.active {
-  background: rgba(255, 255, 255, 0.92);
-  color: #2b5797;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1768c7;
 }
 /* keep the "data coverage incomplete" amber hint legible on navy */
 :root[data-theme="light"] .zone1 .btn.coverage.has-missing {
@@ -320,39 +322,57 @@
   background: rgba(242, 178, 0, 0.28);
   color: #ffdd8a;
 }
-/* compare dock, open state — solid light pill so it reads as active on the navy band */
+/* compare dock, open state — solid light pill so it reads as active on the steel band */
 :root[data-theme="light"] .zone1 .cmp-dock.open {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(255, 255, 255, 0.92);
-  color: #2b5797;
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.95);
+  color: #1768c7;
 }
 
-/* --- 2-4. Main table card: translucent navy surface + strong navy header band +
-   navy-toned alternating rows. Targeted via :has(table) so ONLY the comparison-table
-   card carries the navy treatment; the chart / insight / provenance cards do not. --- */
+/* --- 2-6. Main table card: subtle translucent pale-blue surface + solid steel-blue header
+   band + soft alternating rows. Targeted via :has(table) so ONLY the comparison-table card
+   carries the treatment; the chart / insight / provenance cards do not. --- */
 :root[data-theme="light"] .card:has(table) {
-  background: linear-gradient(180deg, rgba(43, 87, 151, 0.1) 0%, rgba(43, 87, 151, 0.045) 100%);
-  border-color: rgba(43, 87, 151, 0.24);
+  background: linear-gradient(180deg, rgba(47, 101, 149, 0.06) 0%, rgba(47, 101, 149, 0.03) 100%);
+  border-color: rgba(47, 101, 149, 0.2);
 }
 :root[data-theme="light"] .card:has(table) .card-h {
-  border-bottom-color: rgba(43, 87, 151, 0.16);
+  border-bottom-color: rgba(47, 101, 149, 0.14);
 }
-/* strong navy header band; crisp white column labels */
+/* solid medium steel-blue (#3D78AE) header band; crisp white column labels */
 :root[data-theme="light"] .tbl-wrap thead th {
   color: #ffffff;
-  background: #2b5797;
-  border-bottom-color: #1e3a63;
+  background: #3d78ae;
+  border-bottom-color: #336b9e;
 }
 :root[data-theme="light"] .tbl-wrap thead th.oem {
-  background: #244a80;
+  background: #37709e;
+}
+/* elegant alternating rows — Row A #FAFCFE, Row B #E3EDF6 — applied full-width (incl. the
+   sticky OEM column) so each row reads as one soft band. Hover / selected / total re-declared
+   here so they keep winning over the striping's specificity. */
+:root[data-theme="light"] .tbl-wrap tbody td {
+  background: var(--surface-main);
+}
+:root[data-theme="light"] .tbl-wrap tbody tr:nth-child(even) td {
+  background: var(--row-alt);
+}
+:root[data-theme="light"] .tbl-wrap tbody tr:hover td {
+  background: var(--row-hover);
+}
+:root[data-theme="light"] .tbl-wrap tbody tr.sel td {
+  background: var(--purple-soft);
+}
+:root[data-theme="light"] .tbl-wrap tr.total td {
+  background: #edf4fa !important;
 }
 
-/* --- 6. Chart card: kept clean white and lifted, so it reads as the hero surface
-   against the navy-led table card and the cream page. --- */
+/* --- 7. Chart card: kept clean white and lifted, so it reads as the hero surface
+   against the pale-blue table card and the blue-grey page. --- */
 :root[data-theme="light"] .card:has(.trend-plot) {
   background: #ffffff;
-  border-color: rgba(43, 87, 151, 0.16);
-  box-shadow: 0 2px 4px rgba(22, 33, 62, 0.06), 0 16px 40px rgba(22, 33, 62, 0.13);
+  border-color: rgba(47, 101, 149, 0.2);
+  box-shadow: 0 2px 4px rgba(23, 55, 94, 0.06), 0 16px 40px rgba(23, 55, 94, 0.12);
 }
 
 * {
