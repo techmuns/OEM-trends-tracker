@@ -375,6 +375,21 @@
   box-shadow: 0 2px 4px rgba(23, 55, 94, 0.06), 0 16px 40px rgba(23, 55, 94, 0.12);
 }
 
+/* --- 8. Selected "pill" states — the active year chip and the in-card segmented controls
+   (Both/Absolute/YoY, 6M/12M/24M, Exports/Production) — read as a solid, darker accent-blue
+   fill with white text instead of a pale tint. The header segmented control keeps its own
+   white-pill styling (higher specificity via .zone1). --- */
+:root[data-theme="light"] .chip.active {
+  background: #1768c7;
+  border-color: #1768c7;
+  color: #ffffff;
+  box-shadow: none;
+}
+:root[data-theme="light"] .seg button.active {
+  background: #1768c7;
+  color: #ffffff;
+}
+
 * {
   box-sizing: border-box;
 }
