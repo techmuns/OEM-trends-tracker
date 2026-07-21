@@ -2745,3 +2745,45 @@ thead th:hover .cmp-grip.col-grip,
     border-top: 1px solid var(--border);
   }
 }
+
+/* ============================================================================
+   THEME WIPE — smooth left→right reveal when toggling dark ⇄ light.
+
+   The toggle uses the View Transitions API (App.tsx): the whole page is
+   snapshotted, the theme is swapped, then the browser paints the OLD theme
+   (::view-transition-old) with the NEW theme (::view-transition-new) stacked
+   on top. We hold the old snapshot still and clip-path–wipe the new one across
+   it from the left edge to the right, so the incoming palette sweeps in as one
+   clean curtain across the entire dashboard.
+
+   Scoped to html.theme-vt (set only for the duration of a theme toggle) so it
+   never touches any other view transition. Browsers without the API swap
+   instantly (handled in JS); motion-reduced users skip the sweep below too.
+   ============================================================================ */
+@keyframes theme-wipe-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+html.theme-vt::view-transition-group(root) {
+  animation-duration: 640ms;
+}
+/* keep the outgoing theme perfectly still underneath the incoming wipe */
+html.theme-vt::view-transition-old(root) {
+  animation: none;
+}
+/* the incoming theme sweeps in left→right over the old one */
+html.theme-vt::view-transition-new(root) {
+  animation: theme-wipe-in 640ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-vt::view-transition-old(root),
+  html.theme-vt::view-transition-new(root) {
+    animation: none;
+  }
+}

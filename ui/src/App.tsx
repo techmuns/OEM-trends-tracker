@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import { useBundle, useManifest } from "./lib/useBundle";
 import { useHostContext, useSnapshotMode } from "./lib/host";
 import type { CategoryInfo, Flow, Period, PeriodType, Point, Powertrain, ViewModel } from "./lib/types";
@@ -40,19 +41,59 @@ const THEME_KEY = "oem-tracker-theme";
 function getInitialTheme(): ThemeName {
   return window.localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
 }
+function applyTheme(theme: ThemeName) {
+  document.documentElement.dataset.theme = theme;
+  try {
+    window.localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    /* storage disabled (private mode): the theme still applies for this session */
+  }
+}
 // Applied once at module load (before first paint) so there's no dark→light flash on reload.
-document.documentElement.dataset.theme = getInitialTheme();
+applyTheme(getInitialTheme());
+
+// View Transitions API — present in Chromium/Safari, absent in Firefox. Typed locally (and
+// reached via an `unknown` cast) so the build never depends on the DOM lib shipping it.
+interface ViewTransitionDoc {
+  startViewTransition?: (callback: () => void | Promise<void>) => { finished: Promise<void> };
+}
 
 function ThemeToggle() {
   const [theme, setTheme] = useState<ThemeName>(getInitialTheme);
+  // Keep <html data-theme> + storage in sync for the initial mount and the no-animation path.
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem(THEME_KEY, theme);
+    applyTheme(theme);
   }, [theme]);
+
+  function toggleTheme() {
+    const next: ThemeName = theme === "dark" ? "light" : "dark";
+    const startViewTransition = (document as unknown as ViewTransitionDoc).startViewTransition;
+    const reduceMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // No View Transitions support, or the user prefers reduced motion → swap instantly.
+    if (typeof startViewTransition !== "function" || reduceMotion) {
+      setTheme(next);
+      return;
+    }
+
+    // Animated path: snapshot the page, swap the theme inside the callback so the incoming
+    // theme is captured, then a CSS clip-path wipes the new snapshot across the old one from
+    // left to right (see the "THEME WIPE" block in styles.css).
+    const root = document.documentElement;
+    root.classList.add("theme-vt");
+    const transition = startViewTransition.call(document, () => {
+      applyTheme(next); // <html data-theme> swap — painted into the "new" snapshot
+      flushSync(() => setTheme(next)); // sync-render so the sun/moon icon swaps in the same frame
+    });
+    transition.finished.finally(() => root.classList.remove("theme-vt"));
+  }
+
   return (
     <button
       className="btn icon"
-      onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+      onClick={toggleTheme}
       title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
       aria-label="Toggle light / dark theme"
     >
