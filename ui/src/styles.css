@@ -389,6 +389,28 @@
   background: #1768c7;
   color: #ffffff;
 }
+/* unselected year chips + in-card segmented options: filled medium steel-blue (#3D78AE, the
+   table-header blue) with white text, so the whole selector reads as a set of blue pills — the
+   selected one stays the stronger/darker accent blue above. "More years" (ghost), disabled
+   options and the header's own segmented control are deliberately left as-is. */
+:root[data-theme="light"] .chip:not(.active):not(.ghost) {
+  background: #3d78ae;
+  border-color: #3d78ae;
+  color: #ffffff;
+}
+:root[data-theme="light"] .chip:not(.active):not(.ghost):hover {
+  background: #35699e;
+  border-color: #35699e;
+  color: #ffffff;
+}
+:root[data-theme="light"] .seg.mini button:not(.active):not(:disabled) {
+  background: #3d78ae;
+  color: #ffffff;
+}
+:root[data-theme="light"] .seg.mini button:not(.active):not(:disabled):hover {
+  background: #35699e;
+  color: #ffffff;
+}
 
 * {
   box-sizing: border-box;
