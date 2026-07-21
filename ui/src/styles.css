@@ -136,7 +136,7 @@
   /* component aliases that are hardcoded (not var()-derived) in the base palette above, so
      they need an explicit light-theme value too */
   --surface-1: rgba(247, 249, 252, 0.97); /* card / table surface — crisper vs. the ivory canvas */
-  --row-alt: rgba(22, 33, 62, 0.045); /* alternating table row: faint cool blue-grey wash */
+  --row-alt: rgba(43, 87, 151, 0.07); /* alternating table row: navy-toned band for rhythm */
   --selected-blue: rgba(255, 253, 248, 0.96); /* active tab background */
 
   /* softer, cooler-toned elevation for a light canvas — the dark theme's near-black shadow
@@ -174,12 +174,13 @@
   --grid-line: rgba(22, 33, 62, 0.12);
   --divider: rgba(22, 33, 62, 0.1);
 
-  /* second/third-ranked OEM lines in the trend chart: a muted blue + restrained gold, kept
-     distinct from both the navy accent (1st-ranked / selected) and the positive/negative
+  /* second/third-ranked OEM lines in the trend chart: a deeper muted blue + restrained gold,
+     kept distinct from both the navy accent (1st-ranked / selected) and the positive/negative
      green-red used for deltas */
-  --chart-2: #5f83ab;
+  --chart-2: #4a6fa5;
 
-  --header-bg: rgba(238, 240, 244, 0.88);
+  /* solid navy header — the page's theme anchor (controls inside are restyled below) */
+  --header-bg: linear-gradient(180deg, #2b5797 0%, #244a80 100%);
   --tooltip-bg: #f7f9fc;
   --tooltip-border: #c9ccd6;
 
@@ -231,13 +232,6 @@
   color: var(--purple-primary);
   font-weight: 600;
 }
-:root[data-theme="light"] thead th {
-  color: var(--purple-primary);
-  background: #eef1f6;
-}
-:root[data-theme="light"] thead th.oem {
-  background: #eef1f6;
-}
 :root[data-theme="light"] .tab {
   color: var(--text-secondary);
 }
@@ -247,6 +241,118 @@
 }
 :root[data-theme="light"] tbody tr.sel td.oem {
   color: var(--purple-primary);
+}
+
+/* ============================================================================
+   LIGHT THEME — navy-led visual identity. Colours / backgrounds / contrast only;
+   no layout, spacing, sizing, or structural change. All rules are
+   [data-theme="light"] scoped, so the dark theme is completely untouched.
+   ============================================================================ */
+
+/* --- 1. Header: solid navy anchor. Every control inside becomes a translucent-white
+   chip so the band reads as one elegant navy surface with readable controls. --- */
+:root[data-theme="light"] .zone1 {
+  border-bottom-color: #17335c;
+  box-shadow: 0 6px 20px rgba(22, 33, 62, 0.18);
+}
+:root[data-theme="light"] .zone1 .title,
+:root[data-theme="light"] .zone1 button.title.as-home {
+  color: #ffffff;
+}
+:root[data-theme="light"] .zone1 button.title.as-home:hover,
+:root[data-theme="light"] .zone1 button.title.as-home:focus-visible {
+  color: #b9d2f5;
+}
+:root[data-theme="light"] .zone1 select,
+:root[data-theme="light"] .zone1 .btn,
+:root[data-theme="light"] .zone1 .seg,
+:root[data-theme="light"] .zone1 .cmp-dock,
+:root[data-theme="light"] .zone1 .source-pill,
+:root[data-theme="light"] .zone1 .ticker-pill {
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.26);
+  color: #eaf1fb;
+}
+:root[data-theme="light"] .zone1 select:hover,
+:root[data-theme="light"] .zone1 .btn:hover,
+:root[data-theme="light"] .zone1 .cmp-dock:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+}
+:root[data-theme="light"] .zone1 .source-pill b {
+  color: #ffffff;
+}
+:root[data-theme="light"] .zone1 .source-pill,
+:root[data-theme="light"] .zone1 .source-pill .src-basis,
+:root[data-theme="light"] .zone1 .source-pill[data-source="SIAM"],
+:root[data-theme="light"] .zone1 .source-pill[data-source="SIAM"] .src-basis,
+:root[data-theme="light"] .zone1 .source-pill[data-source="VAHAN"],
+:root[data-theme="light"] .zone1 .source-pill[data-source="VAHAN"] .src-basis {
+  color: #dbe7f7;
+}
+/* light dropdown arrow so it shows on the translucent chip (navy arrow would vanish).
+   The group rule above uses the `background` shorthand, which resets repeat/position — so
+   re-declare them here or the arrow tiles across the whole control. */
+:root[data-theme="light"] .zone1 select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%23DBE7F7' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+}
+/* segmented control on navy: quiet light labels, active = solid light pill with navy text */
+:root[data-theme="light"] .zone1 .seg button {
+  color: rgba(255, 255, 255, 0.74);
+}
+:root[data-theme="light"] .zone1 .seg button:hover {
+  color: #ffffff;
+}
+:root[data-theme="light"] .zone1 .seg button.active {
+  background: rgba(255, 255, 255, 0.92);
+  color: #2b5797;
+}
+/* keep the "data coverage incomplete" amber hint legible on navy */
+:root[data-theme="light"] .zone1 .btn.coverage.has-missing {
+  background: rgba(242, 178, 0, 0.18);
+  border-color: rgba(242, 178, 0, 0.5);
+  color: #ffd166;
+}
+:root[data-theme="light"] .zone1 .btn.coverage.has-missing:hover {
+  background: rgba(242, 178, 0, 0.28);
+  color: #ffdd8a;
+}
+/* compare dock, open state — solid light pill so it reads as active on the navy band */
+:root[data-theme="light"] .zone1 .cmp-dock.open {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.92);
+  color: #2b5797;
+}
+
+/* --- 2-4. Main table card: translucent navy surface + strong navy header band +
+   navy-toned alternating rows. Targeted via :has(table) so ONLY the comparison-table
+   card carries the navy treatment; the chart / insight / provenance cards do not. --- */
+:root[data-theme="light"] .card:has(table) {
+  background: linear-gradient(180deg, rgba(43, 87, 151, 0.1) 0%, rgba(43, 87, 151, 0.045) 100%);
+  border-color: rgba(43, 87, 151, 0.24);
+}
+:root[data-theme="light"] .card:has(table) .card-h {
+  border-bottom-color: rgba(43, 87, 151, 0.16);
+}
+/* strong navy header band; crisp white column labels */
+:root[data-theme="light"] .tbl-wrap thead th {
+  color: #ffffff;
+  background: #2b5797;
+  border-bottom-color: #1e3a63;
+}
+:root[data-theme="light"] .tbl-wrap thead th.oem {
+  background: #244a80;
+}
+
+/* --- 6. Chart card: kept clean white and lifted, so it reads as the hero surface
+   against the navy-led table card and the cream page. --- */
+:root[data-theme="light"] .card:has(.trend-plot) {
+  background: #ffffff;
+  border-color: rgba(43, 87, 151, 0.16);
+  box-shadow: 0 2px 4px rgba(22, 33, 62, 0.06), 0 16px 40px rgba(22, 33, 62, 0.13);
 }
 
 * {
