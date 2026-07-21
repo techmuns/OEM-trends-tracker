@@ -1,0 +1,48 @@
+# VAHAN "Vehicle Class" -> contract category map.
+#
+# VAHAN reports registrations under RTO *vehicle classes* (MOTOR CAR, M-CYCLE/SCOOTER,
+# GOODS CARRIER ...), NOT SIAM's 2W/PV/3W/CV segmentation. This file is the explicit,
+# reviewed bridge between the two — the labels are copied EXACTLY as they appear in a
+# VAHAN "Vehicle Class Month Wise" export (from the govt dashboard), never guessed.
+#
+# Mapping rules (encode, don't infer):
+#   - A class not listed here is IGNORED with a warning (many VAHAN classes are cranes,
+#     forklifts, ambulances etc. that belong to none of 2W/PV/3W/CV). Ignoring is safe:
+#     a registration we can't confidently place is left out, never mis-bucketed.
+#   - VAHAN has NO clean "passenger car" category; MOTOR CAR is the accepted proxy for PV
+#     (private cars + UVs). It will not tie out 1:1 with SIAM PV (different basis + scope).
+#   - Matching is case-insensitive on the whitespace-collapsed label.
+#
+# Categories use the frozen contract enum: 2W | PV | 3W | CV (TRACTOR not sourced here).
+
+version: 1
+
+classes:
+  # --- Two-Wheelers -------------------------------------------------------------------
+  "M-CYCLE/SCOOTER": 2W
+  "M-CYCLE/SCOOTER-WITH SIDE CAR": 2W
+  "MOPED": 2W
+  "MOTORISED CYCLE (CC > 25CC)": 2W
+  "MOTOR CYCLE/SCOOTER-SIDECAR(T)": 2W
+  "MOTOR CYCLE/SCOOTER-WITH TRAILER": 2W
+  "MOTOR CYCLE/SCOOTER-USED FOR HIRE": 2W
+
+  # --- Passenger Vehicles (MOTOR CAR is the accepted PV proxy) -------------------------
+  "MOTOR CAR": PV
+
+  # --- Three-Wheelers -----------------------------------------------------------------
+  "THREE WHEELER (PASSENGER)": 3W
+  "THREE WHEELER (GOODS)": 3W
+  "THREE WHEELER (PERSONAL)": 3W
+  "E-RICKSHAW(P)": 3W
+  "E-RICKSHAW WITH CART (G)": 3W
+
+  # --- Commercial Vehicles ------------------------------------------------------------
+  "GOODS CARRIER": CV
+  "BUS": CV
+  "SCHOOL BUS": CV
+  "OMNI BUS": CV
+  "MAXI CAB": CV
+  "DUMPER": CV
+  "TRACTOR (COMMERCIAL)": CV
+  "TRAILER (COMMERCIAL)": CV
