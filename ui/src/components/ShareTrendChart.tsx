@@ -248,7 +248,7 @@ export function ShareTrendChart({
                     d={d}
                     fill="none"
                     style={{ stroke }}
-                    strokeWidth={isFocus ? 2.5 : 2}
+                    strokeWidth={isFocus ? 1.9 : 1.4}
                     strokeLinejoin="round"
                     strokeLinecap="round"
                   />
@@ -361,16 +361,55 @@ function ppClass(v: number | null): string {
 }
 
 function buildSegments(points: TrendPoint[], x: (i: number) => number, y: (v: number) => number): string[] {
+  // Split into contiguous runs at missing points (a null breaks the line), then render each run
+  // as a smooth curve rather than straight segments.
   const segs: string[] = [];
-  let cur: string[] = [];
+  let run: { x: number; y: number }[] = [];
   points.forEach((p, i) => {
     if (p.value === null) {
-      if (cur.length > 1) segs.push(cur.join(" "));
-      cur = [];
+      if (run.length > 1) segs.push(smoothPath(run));
+      run = [];
     } else {
-      cur.push(`${cur.length ? "L" : "M"}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`);
+      run.push({ x: x(i), y: y(p.value) });
     }
   });
-  if (cur.length > 1) segs.push(cur.join(" "));
+  if (run.length > 1) segs.push(smoothPath(run));
   return segs;
+}
+
+// Monotone cubic interpolation (like d3's curveMonotoneX): a smooth line that passes through
+// every point and never overshoots between them — so a smoothed share line can't imply a value
+// the data doesn't show (peaks/troughs round off exactly at the data point, never beyond it).
+function smoothPath(pts: { x: number; y: number }[]): string {
+  const n = pts.length;
+  const f = (v: number) => (Math.round(v * 10) / 10).toString();
+  let d = `M${f(pts[0].x)},${f(pts[0].y)}`;
+  if (n === 2) return d + ` L${f(pts[1].x)},${f(pts[1].y)}`;
+  // secant slopes between consecutive points
+  const s: number[] = [];
+  for (let i = 0; i < n - 1; i++) s[i] = (pts[i + 1].y - pts[i].y) / (pts[i + 1].x - pts[i].x);
+  // tangents at each point (Fritsch–Carlson limited so segments stay monotone → no overshoot)
+  const t: number[] = new Array(n);
+  for (let i = 1; i < n - 1; i++) {
+    if (s[i - 1] * s[i] <= 0) {
+      t[i] = 0; // local extremum → flat tangent
+    } else {
+      const h0 = pts[i].x - pts[i - 1].x;
+      const h1 = pts[i + 1].x - pts[i].x;
+      const p = (s[i - 1] * h1 + s[i] * h0) / (h0 + h1);
+      t[i] = (Math.sign(s[i - 1]) + Math.sign(s[i])) * Math.min(Math.abs(s[i - 1]), Math.abs(s[i]), 0.5 * Math.abs(p));
+    }
+  }
+  t[0] = (3 * s[0] - t[1]) / 2;
+  t[n - 1] = (3 * s[n - 2] - t[n - 2]) / 2;
+  // one cubic bézier per segment, control points a third of the way in along each tangent
+  for (let i = 0; i < n - 1; i++) {
+    const dx = (pts[i + 1].x - pts[i].x) / 3;
+    const c1x = pts[i].x + dx;
+    const c1y = pts[i].y + dx * t[i];
+    const c2x = pts[i + 1].x - dx;
+    const c2y = pts[i + 1].y - dx * t[i + 1];
+    d += ` C${f(c1x)},${f(c1y)} ${f(c2x)},${f(c2y)} ${f(pts[i + 1].x)},${f(pts[i + 1].y)}`;
+  }
+  return d;
 }
