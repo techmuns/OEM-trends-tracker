@@ -1,6 +1,7 @@
 // The primary analytical object: OEM × (current vs prior-year) with YoY, share, share-change.
 // Sticky OEM column + sticky header. Values are precomputed; this only selects and formats.
 
+import { useRef } from "react";
 import { deltaDir, Delta, RevisedBadge } from "./ui";
 import { fmtPct, fmtPp, fmtShare, fmtUnits, shortName } from "../lib/format";
 import type { TableRow } from "../lib/view";
@@ -51,9 +52,38 @@ export function ComparisonTable({
   const showChg = mode !== "absolute";
   const interactive = !!onHover;
 
+  // Scroll-driven selection: while the interactive table is scrolled, the OEM row sitting just
+  // below the sticky header becomes the selection, so scrolling the supporting table scrubs the
+  // hero chart through the OEMs. rAF-throttled and no-ops when the top row hasn't changed.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const selRef = useRef(selected);
+  selRef.current = selected;
+  const rafPending = useRef(false);
+  const onScroll = () => {
+    if (!interactive || rafPending.current) return;
+    rafPending.current = true;
+    requestAnimationFrame(() => {
+      rafPending.current = false;
+      const el = wrapRef.current;
+      if (!el) return;
+      const headH = el.querySelector("thead")?.getBoundingClientRect().height ?? 0;
+      const anchorY = el.getBoundingClientRect().top + headH + 2;
+      const trs = el.querySelectorAll<HTMLTableRowElement>("tbody tr[data-company]");
+      for (const tr of trs) {
+        const rect = tr.getBoundingClientRect();
+        if (rect.top <= anchorY && rect.bottom > anchorY) {
+          const c = tr.dataset.company;
+          if (c && c !== selRef.current) onSelect(c);
+          break;
+        }
+      }
+    });
+  };
+
   const render = (r: TableRow, isTotal = false) => (
     <tr
       key={r.company}
+      data-company={isTotal ? undefined : r.company}
       className={isTotal ? "total" : selected === r.company ? "sel" : undefined}
       onClick={() => !isTotal && onSelect(r.company)}
       onMouseEnter={interactive && !isTotal ? () => onHover!(r.company) : undefined}
@@ -91,7 +121,11 @@ export function ComparisonTable({
   );
 
   return (
-    <div className={`tbl-wrap ${expanded ? "expanded" : ""} ${interactive ? "interactive" : ""}`}>
+    <div
+      ref={wrapRef}
+      onScroll={onScroll}
+      className={`tbl-wrap ${expanded ? "expanded" : ""} ${interactive ? "interactive" : ""}`}
+    >
       <table>
         <thead>
           <tr>

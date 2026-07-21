@@ -931,6 +931,25 @@ select:disabled {
 .mainrow.norail {
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
 }
+/* The supporting table card fills its (stretched) height so the OEM snapshot scrolls through
+   ALL rows inside the card — no fixed cap, no empty gap beneath it. The hero chart drives the
+   row height and the table matches it, scrolling internally. The scroll area is absolutely
+   positioned so that a long OEM list cannot inflate the grid track (which would otherwise
+   stretch the chart to match); it fills the card body instead. Reverted to normal flow when the
+   panels stack (see the responsive blocks). */
+.card:has(.tbl-wrap) {
+  min-height: 0;
+}
+.card:has(.tbl-wrap) .card-b {
+  position: relative;
+  padding: 0;
+  min-height: 0;
+}
+.card:has(.tbl-wrap) .tbl-wrap {
+  position: absolute;
+  inset: 12px 14px;
+  max-height: none;
+}
 .mainrow.details.norail {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -1495,6 +1514,16 @@ tr.total td.oem {
     border: 1px solid var(--border-subtle);
     height: 28px;
     flex-shrink: 0;
+  }
+  /* stacked: the table returns to normal flow and scrolls within a bounded height */
+  .card:has(.tbl-wrap) .card-b {
+    position: static;
+    padding: 14px 16px;
+  }
+  .card:has(.tbl-wrap) .tbl-wrap {
+    position: static;
+    inset: auto;
+    max-height: 68vh;
   }
   .insights {
     grid-template-columns: 1fr;
@@ -2659,6 +2688,16 @@ thead th:hover .cmp-grip.col-grip,
     border: 1px solid var(--border-subtle);
     height: 28px;
     flex-shrink: 0;
+  }
+  /* stacked: the table returns to normal flow and scrolls within a bounded height */
+  .card:has(.tbl-wrap) .card-b {
+    position: static;
+    padding: 14px 16px;
+  }
+  .card:has(.tbl-wrap) .tbl-wrap {
+    position: static;
+    inset: auto;
+    max-height: 68vh;
   }
   .insights {
     grid-template-columns: 1fr;
