@@ -119,12 +119,15 @@
 :root[data-theme="light"] {
   color-scheme: light;
 
+  /* the dark theme bakes its purple into every neutral surface, not just accents (--bg-main,
+     --surface-main etc. are all purple-tinted, not true grey/black) — these mirror that with
+     navy instead of purple, so navy is structurally pervasive here too */
   --bg-main: #f3eee2;
-  --bg-deep: #ece4d2;
-  --bg-elevated: #ffffff;
-  --surface-main: #ffffff;
-  --surface-raised: #fffdf8;
-  --surface-hovercolor: #ece4d3;
+  --bg-deep: #e6e8ea;
+  --bg-elevated: #f7f9fc;
+  --surface-main: #f7f9fc;
+  --surface-raised: #f9fafc;
+  --surface-hovercolor: #e3e7ee;
 
   --border-default: #c9ccd6;
   --border-softc: rgba(22, 33, 62, 0.11);
@@ -132,7 +135,7 @@
 
   /* component aliases that are hardcoded (not var()-derived) in the base palette above, so
      they need an explicit light-theme value too */
-  --surface-1: rgba(255, 255, 255, 0.97); /* card / table surface — crisper vs. the ivory canvas */
+  --surface-1: rgba(247, 249, 252, 0.97); /* card / table surface — crisper vs. the ivory canvas */
   --row-alt: rgba(22, 33, 62, 0.045); /* alternating table row: faint cool blue-grey wash */
   --selected-blue: rgba(255, 253, 248, 0.96); /* active tab background */
 
@@ -167,7 +170,7 @@
   --text-muted: #6c7690;
   --text-disabled: #b7bcc6;
 
-  --neutral-dot: #cfc9b8;
+  --neutral-dot: #c3c8d2;
   --grid-line: rgba(22, 33, 62, 0.12);
   --divider: rgba(22, 33, 62, 0.1);
 
@@ -176,9 +179,9 @@
      green-red used for deltas */
   --chart-2: #5f83ab;
 
-  --header-bg: rgba(243, 238, 226, 0.86);
-  --tooltip-bg: #ffffff;
-  --tooltip-border: #ddd6c0;
+  --header-bg: rgba(238, 240, 244, 0.88);
+  --tooltip-bg: #f7f9fc;
+  --tooltip-border: #c9ccd6;
 
   --btn-primary: linear-gradient(135deg, #1e3a63, #2b5797);
 
@@ -188,8 +191,8 @@
   background:
     radial-gradient(
       ellipse at 52% 48%,
-      rgb(var(--accent-rgb) / 0.06) 0%,
-      rgb(var(--accent-rgb) / 0.03) 34%,
+      rgb(var(--accent-rgb) / 0.16) 0%,
+      rgb(var(--accent-rgb) / 0.08) 34%,
       rgba(243, 238, 226, 0) 70%
     ),
     var(--bg-main);
@@ -198,17 +201,17 @@
   color-scheme: light;
 }
 :root[data-theme="light"] select option {
-  background-color: #ffffff;
+  background-color: #f7f9fc;
   color: #16213e;
 }
 :root[data-theme="light"] select option:checked,
 :root[data-theme="light"] select option:hover {
-  background-color: #ece4d3;
+  background-color: #e3e7ee;
   color: #2b5797;
 }
 :root[data-theme="light"] select optgroup {
-  background-color: #f3eee2;
-  color: #7c8494;
+  background-color: #eceef1;
+  color: #6c7690;
 }
 :root[data-theme="light"] .source-pill[data-source="SIAM"] {
   color: #3a5a8c;
@@ -230,10 +233,10 @@
 }
 :root[data-theme="light"] thead th {
   color: var(--purple-primary);
-  background: #f7f8fb;
+  background: #eef1f6;
 }
 :root[data-theme="light"] thead th.oem {
-  background: #f7f8fb;
+  background: #eef1f6;
 }
 :root[data-theme="light"] .tab {
   color: var(--text-secondary);
