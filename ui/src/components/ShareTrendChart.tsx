@@ -72,8 +72,11 @@ export function ShareTrendChart({
   const [legendHover, setLegendHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
+  // Hero-panel geometry: the chart is the dominant left panel, so the viewBox is taller
+  // (≈2.2:1 vs the old ≈2.9:1) to give the trend a large, immediately readable plotting area.
+  // width scales to the container; height follows via the viewBox aspect ratio.
   const W = 664;
-  const H = 226;
+  const H = 300;
   const padL = 58;
   const padR = 150;
   const padT = 18;

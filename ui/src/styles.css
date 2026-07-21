@@ -798,6 +798,9 @@ select:disabled {
   flex-direction: column;
   gap: 2px;
   padding-top: 4px;
+  /* the mainrow stretches its cards to equal height; the rail is a nav list, so keep it
+     pinned to the top rather than stretched down the full card height. */
+  align-self: start;
 }
 .rail-item {
   display: flex;
@@ -913,16 +916,20 @@ select:disabled {
 /* --- layout grids --- */
 .mainrow {
   display: grid;
-  grid-template-columns: 128px minmax(0, 1.72fr) minmax(0, 1fr);
-  gap: 14px;
+  /* [period rail | HERO trend chart ~2fr | supporting OEM table ~1fr]. The chart is the
+     dominant analytical panel (~66% of the content width); the table is its ~33% supporting
+     snapshot. align-items: stretch keeps the two cards at equal height with aligned tops and
+     bottoms. */
+  grid-template-columns: 128px minmax(0, 2fr) minmax(0, 1fr);
+  gap: 18px;
   margin-bottom: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 .mainrow.details {
   grid-template-columns: 128px minmax(0, 1fr);
 }
 .mainrow.norail {
-  grid-template-columns: minmax(0, 1.72fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
 }
 .mainrow.details.norail {
   grid-template-columns: minmax(0, 1fr);
@@ -977,6 +984,44 @@ select:disabled {
 }
 .tbl-wrap.expanded {
   max-height: none;
+}
+/* Supporting-panel compaction: the OEM snapshot now sits in the narrow (~33%) right column
+   beside the hero chart, so tighten cell padding, font size and row height, and optimise the
+   two widest columns, to fit all columns comfortably without a compressed look. Scoped to
+   .tbl-wrap so the Compare table is untouched; horizontal scroll (overflow:auto on .tbl-wrap)
+   stays only as a last resort. */
+.tbl-wrap table {
+  font-size: 11.5px;
+}
+/* Let multi-word headers ("May '26 Share", "Share Δ (pp)") wrap to two lines instead of
+   forcing their column as wide as the header text — the values below are short. */
+.tbl-wrap thead th {
+  padding: 0 6px;
+  height: 34px;
+  white-space: normal;
+  line-height: 1.15;
+  vertical-align: middle;
+}
+.tbl-wrap tbody td {
+  padding: 0 6px;
+  height: 34px;
+}
+/* Cap the OEM column so the long "TOTAL / REPORTED UNIVERSE" label (which otherwise forces the
+   column ~2× wider than any OEM name) wraps on the total row; OEM names stay on one line and
+   ellipsis-truncate only in the rare event a name exceeds the cap. */
+.tbl-wrap th.oem,
+.tbl-wrap td.oem {
+  max-width: 118px;
+}
+.tbl-wrap tbody td.oem {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tbl-wrap tr.total td.oem {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.2;
 }
 table {
   border-collapse: collapse;

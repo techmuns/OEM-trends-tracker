@@ -643,10 +643,12 @@ function rangeLabels(pt: PeriodType): string[] {
   return pt === "month" ? ["6M", "12M", "24M"] : pt === "quarter" ? ["8Q", "12Q", "16Q"] : ["5Y", "8Y", "10Y"];
 }
 
-// ---- shared analytical template: [period rail | dominant table | supporting chart] ----
+// ---- shared analytical template: [period rail | hero trend chart | supporting table] ----
 // Every page (Sales, EV, Production/Exports) renders through this so the three behave like
 // different datasets inside one template: identical proportions, row hover→focus, click→lock,
 // Reset, tooltip, table view-toggle, range control, source footer and details expansion.
+// The trend chart is the dominant hero panel (left); the OEM table is the supporting snapshot
+// panel (right). Clicking a table row still locks the chart onto that OEM.
 interface TableConfig {
   title: string;
   subtitle?: string;
@@ -804,8 +806,8 @@ function AnalyticalTab({
   return (
     <div className={`mainrow ${norail ? "norail" : ""}`}>
       {!norail && <PeriodRail axis={axis} pt={pt} periodKey={period.key} onChange={setPeriod} />}
-      {tableCard}
       {chartCard}
+      {tableCard}
     </div>
   );
 }
