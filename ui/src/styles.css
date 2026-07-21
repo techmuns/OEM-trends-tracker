@@ -20,7 +20,11 @@
 
   --purple-primary: #a17cfa;
   --purple-strong: #7c3aed;
-  --purple-soft: rgba(161, 124, 250, 0.12);
+  /* space-separated so accent-tinted rgba()/box-shadow declarations below can pull the
+     channel values in and re-tint automatically when the light theme overrides them */
+  --accent-rgb: 161 124 250;
+  --accent-strong-rgb: 124 58 237;
+  --purple-soft: rgb(var(--accent-rgb) / 0.12);
 
   --green-primary: #00b88a;
   --green-bright: #00d09c;
@@ -44,9 +48,9 @@
 
   /* soft elevation + interaction (per spec) */
   --card-shadow: 0 18px 48px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.035);
-  --active-glow: 0 0 0 1px rgba(161, 124, 250, 0.2), 0 0 28px rgba(124, 58, 237, 0.26),
-    inset 0 0 18px rgba(161, 124, 250, 0.045);
-  --hover-shadow: 0 22px 52px rgba(0, 0, 0, 0.4), 0 0 22px rgba(124, 58, 237, 0.13);
+  --active-glow: 0 0 0 1px rgb(var(--accent-rgb) / 0.2), 0 0 28px rgb(var(--accent-strong-rgb) / 0.26),
+    inset 0 0 18px rgb(var(--accent-rgb) / 0.045);
+  --hover-shadow: 0 22px 52px rgba(0, 0, 0, 0.4), 0 0 22px rgb(var(--accent-strong-rgb) / 0.13);
   --btn-primary: linear-gradient(135deg, #7c3aed, #9168f5);
 
   /* ---- component aliases: existing token names → new palette (so all CSS re-themes) ---- */
@@ -62,12 +66,12 @@
   --accent-border: var(--border-active);
 
   --blue-tint: var(--purple-soft); /* legacy alias → purple overlay */
-  --row-hover: rgba(161, 124, 250, 0.055);
+  --row-hover: rgb(var(--accent-rgb) / 0.055);
   --selected-blue: rgba(28, 22, 43, 0.96);
 
   --border: var(--border-default);
   --border-subtle: var(--border-softc);
-  --border-strong: rgba(161, 124, 250, 0.42);
+  --border-strong: rgb(var(--accent-rgb) / 0.42);
 
   --positive: var(--green-primary);
   --positive-soft: var(--green-soft);
@@ -97,9 +101,9 @@
   --chart-focus: var(--purple-primary); /* selected / focused line */
   --chart-grid: var(--grid-line);
   --chart-axis: var(--text-muted);
-  --chart-crosshair: rgba(161, 124, 250, 0.3);
+  --chart-crosshair: rgb(var(--accent-rgb) / 0.3);
 
-  --scrollbar-thumb: rgba(161, 124, 250, 0.28);
+  --scrollbar-thumb: rgb(var(--accent-rgb) / 0.28);
   --scrollbar-track: transparent;
 
   --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%23A17CFA' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
@@ -124,7 +128,7 @@
 
   --border-default: #e3dcc8;
   --border-softc: rgba(22, 33, 62, 0.08);
-  --border-active: #7c3aed;
+  --border-active: #2b5797;
 
   /* component aliases that are hardcoded (not var()-derived) in the base palette above, so
      they need an explicit light-theme value too */
@@ -132,9 +136,13 @@
   --row-alt: rgba(22, 33, 62, 0.03); /* alternating table row: faint dark wash on light bg */
   --selected-blue: rgba(255, 253, 248, 0.96); /* active tab background */
 
-  --purple-primary: #7c3aed;
-  --purple-strong: #6d28d9;
-  --purple-soft: rgba(124, 58, 237, 0.1);
+  /* accent hue switches from the dark theme's violet to the navy blue from the reference
+     mockup — --accent-rgb/--accent-strong-rgb feed every rgba()/box-shadow glow above and
+     below automatically, so this is the only place the blue is defined. */
+  --purple-primary: #2b5797;
+  --purple-strong: #1e3a63;
+  --accent-rgb: 43 87 151;
+  --accent-strong-rgb: 30 58 99;
 
   --green-primary: #0f9d6e;
   --green-bright: #0a8a5f;
@@ -160,16 +168,16 @@
   --tooltip-bg: #ffffff;
   --tooltip-border: #ddd6c0;
 
-  --scrollbar-thumb: rgba(124, 58, 237, 0.25);
+  --btn-primary: linear-gradient(135deg, #1e3a63, #2b5797);
 
-  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%237C3AED' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 3.5L5 6.5L8 3.5' stroke='%232B5797' stroke-width='1.3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 :root[data-theme="light"] body {
   background:
     radial-gradient(
       ellipse at 52% 48%,
-      rgba(124, 58, 237, 0.06) 0%,
-      rgba(124, 58, 237, 0.03) 34%,
+      rgb(var(--accent-rgb) / 0.06) 0%,
+      rgb(var(--accent-rgb) / 0.03) 34%,
       rgba(243, 238, 226, 0) 70%
     ),
     var(--bg-main);
@@ -184,7 +192,7 @@
 :root[data-theme="light"] select option:checked,
 :root[data-theme="light"] select option:hover {
   background-color: #ece4d3;
-  color: #7c3aed;
+  color: #2b5797;
 }
 :root[data-theme="light"] select optgroup {
   background-color: #f3eee2;
@@ -429,7 +437,7 @@ select:disabled {
   background: var(--btn-primary);
   border-color: transparent;
   color: var(--text-primary);
-  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 8px 24px rgb(var(--accent-strong-rgb) / 0.3);
 }
 .btn.primary:hover {
   background: var(--btn-primary);
@@ -562,7 +570,7 @@ select:disabled {
   color: var(--purple-primary);
   border-color: var(--border-active);
   background: var(--purple-soft);
-  box-shadow: 0 0 0 1px rgba(161, 124, 250, 0.2), 0 0 16px rgba(124, 58, 237, 0.18);
+  box-shadow: 0 0 0 1px rgb(var(--accent-rgb) / 0.2), 0 0 16px rgb(var(--accent-strong-rgb) / 0.18);
 }
 .chip.ghost {
   color: var(--text-muted);
@@ -610,7 +618,7 @@ select:disabled {
 }
 .rail-item.active .rail-dot {
   background: var(--purple-primary);
-  box-shadow: 0 0 0 3px rgba(161, 124, 250, 0.12), 0 0 10px rgba(161, 124, 250, 0.4);
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.12), 0 0 10px rgb(var(--accent-rgb) / 0.4);
 }
 .rail-title {
   font-size: 11px;
@@ -881,7 +889,7 @@ tr.total td.oem {
 }
 .dot.purple {
   background: var(--purple-primary);
-  box-shadow: 0 0 0 3px rgba(161, 124, 250, 0.12);
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.12);
 }
 .dot.red {
   background: var(--pink-primary);
@@ -1711,13 +1719,13 @@ button.title.as-home:focus-visible {
 }
 /* uploading: violet edge + a soft shimmer sweeping across the chip */
 .upl-file.up {
-  border-color: rgba(161, 124, 250, 0.35);
+  border-color: rgb(var(--accent-rgb) / 0.35);
 }
 .upl-file.up::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(161, 124, 250, 0.14), transparent);
+  background: linear-gradient(90deg, transparent, rgb(var(--accent-rgb) / 0.14), transparent);
   transform: translateX(-100%);
   animation: upl-shimmer 1.3s ease-in-out infinite;
 }
@@ -1749,7 +1757,7 @@ button.title.as-home:focus-visible {
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, var(--purple-strong), var(--purple-primary));
-  box-shadow: 0 0 10px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 0 10px rgb(var(--accent-strong-rgb) / 0.4);
   transition: width 220ms ease;
 }
 .upl-prog-bar.indet {
@@ -1771,7 +1779,7 @@ button.title.as-home:focus-visible {
   display: inline-block;
   width: 11px;
   height: 11px;
-  border: 2px solid rgba(161, 124, 250, 0.28);
+  border: 2px solid rgb(var(--accent-rgb) / 0.28);
   border-top-color: var(--purple-primary);
   border-radius: 50%;
   animation: upl-rot 0.7s linear infinite;
@@ -1916,7 +1924,7 @@ button.title.as-home:focus-visible {
   padding: 40px 24px;
   text-align: center;
   color: var(--text-muted);
-  background: rgba(161, 124, 250, 0.04);
+  background: rgb(var(--accent-rgb) / 0.04);
   border: 1.5px dashed var(--border-strong);
   border-radius: var(--radius);
   transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
