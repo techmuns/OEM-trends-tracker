@@ -126,15 +126,21 @@
   --surface-raised: #fffdf8;
   --surface-hovercolor: #ece4d3;
 
-  --border-default: #e3dcc8;
-  --border-softc: rgba(22, 33, 62, 0.08);
+  --border-default: #c9ccd6;
+  --border-softc: rgba(22, 33, 62, 0.11);
   --border-active: #2b5797;
 
   /* component aliases that are hardcoded (not var()-derived) in the base palette above, so
      they need an explicit light-theme value too */
-  --surface-1: rgba(255, 255, 255, 0.92); /* card / table surface (surface-main @ 92%) */
-  --row-alt: rgba(22, 33, 62, 0.03); /* alternating table row: faint dark wash on light bg */
+  --surface-1: rgba(255, 255, 255, 0.97); /* card / table surface — crisper vs. the ivory canvas */
+  --row-alt: rgba(22, 33, 62, 0.045); /* alternating table row: faint cool blue-grey wash */
   --selected-blue: rgba(255, 253, 248, 0.96); /* active tab background */
+
+  /* softer, cooler-toned elevation for a light canvas — the dark theme's near-black shadow
+     values would read heavy/muddy here */
+  --card-shadow: 0 1px 2px rgba(22, 33, 62, 0.05), 0 10px 28px rgba(22, 33, 62, 0.09);
+  --active-glow: 0 0 0 1px rgb(var(--accent-rgb) / 0.35), 0 0 14px rgb(var(--accent-strong-rgb) / 0.14);
+  --hover-shadow: 0 14px 32px rgba(22, 33, 62, 0.14), 0 0 18px rgb(var(--accent-strong-rgb) / 0.16);
 
   /* accent hue switches from the dark theme's violet to the navy blue from the reference
      mockup — --accent-rgb/--accent-strong-rgb feed every rgba()/box-shadow glow above and
@@ -144,25 +150,31 @@
   --accent-rgb: 43 87 151;
   --accent-strong-rgb: 30 58 99;
 
-  --green-primary: #0f9d6e;
+  --green-primary: #0b8259;
   --green-bright: #0a8a5f;
-  --green-soft: rgba(15, 157, 110, 0.12);
+  --green-soft: rgba(11, 130, 89, 0.12);
 
   --yellow-primary: #b8860b;
   --yellow-bright: #9a6f00;
   --yellow-soft: rgba(184, 134, 11, 0.12);
 
   --pink-primary: #d63384;
-  --red-negative: #c8324a;
+  --red-negative: #ad2740;
+  --negative-soft: rgba(173, 39, 64, 0.1);
 
   --text-primary: #16213e;
   --text-secondary: #4b5568;
-  --text-muted: #7c8494;
+  --text-muted: #6c7690;
   --text-disabled: #b7bcc6;
 
   --neutral-dot: #cfc9b8;
-  --grid-line: rgba(22, 33, 62, 0.07);
-  --divider: rgba(22, 33, 62, 0.08);
+  --grid-line: rgba(22, 33, 62, 0.12);
+  --divider: rgba(22, 33, 62, 0.1);
+
+  /* second/third-ranked OEM lines in the trend chart: a muted blue + restrained gold, kept
+     distinct from both the navy accent (1st-ranked / selected) and the positive/negative
+     green-red used for deltas */
+  --chart-2: #5f83ab;
 
   --header-bg: rgba(243, 238, 226, 0.86);
   --tooltip-bg: #ffffff;
@@ -203,6 +215,35 @@
 }
 :root[data-theme="light"] .source-pill[data-source="SIAM"] .src-basis {
   color: #3a5a8c;
+}
+
+/* ---- light-theme hierarchy: navy for the page title, card titles, table column headers and
+   the active tab — everything else (dark-navy values, blue-grey metadata) already follows
+   from the token changes above. Dark theme is untouched — these are all [data-theme="light"]
+   scoped, layered on top of the shared rules rather than editing them. ---- */
+:root[data-theme="light"] .title {
+  color: var(--purple-primary);
+}
+:root[data-theme="light"] .card-h h3 {
+  color: var(--purple-primary);
+  font-weight: 600;
+}
+:root[data-theme="light"] thead th {
+  color: var(--purple-primary);
+  background: #f7f8fb;
+}
+:root[data-theme="light"] thead th.oem {
+  background: #f7f8fb;
+}
+:root[data-theme="light"] .tab {
+  color: var(--text-secondary);
+}
+:root[data-theme="light"] .tab.active {
+  color: var(--purple-primary);
+  font-weight: 600;
+}
+:root[data-theme="light"] tbody tr.sel td.oem {
+  color: var(--purple-primary);
 }
 
 * {
