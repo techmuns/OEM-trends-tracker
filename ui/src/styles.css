@@ -234,8 +234,16 @@
   color: var(--purple-primary);
   font-weight: 600;
 }
+/* unselected main tabs: a faded blue-grey label + icon (icon inherits currentColor) so they
+   clearly read as inactive next to the accent-blue selected tab. Hover brings them back a step
+   for feedback. The selected tab (.tab.active) is unchanged. */
 :root[data-theme="light"] .tab {
+  color: #93a3b6;
+  background: rgba(250, 252, 254, 0.55);
+}
+:root[data-theme="light"] .tab:hover {
   color: var(--text-secondary);
+  background: var(--surface-hover);
 }
 :root[data-theme="light"] .tab.active {
   color: var(--purple-strong);
